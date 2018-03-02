@@ -4,7 +4,6 @@ from filter import bpFilt, lpFilt, gauKer
 import mcmcAR as mAR
 import ARlib as _arl
 import pyPG as lw
-import kfardat as _kfardat
 import logerfc as _lfc
 import commdefs as _cd
 import os
@@ -342,8 +341,41 @@ class mcmcARspk(mAR.mcmcAR):
     def setParams(self):
         oo = self
         # #generate initial values of parameters
-        oo._d = _kfardat.KFARGauObsDat(oo.TR, oo.N, oo.k)
-        oo._d.copyData(oo.y)
+        #oo._d = _kfardat.KFARGauObsDat(oo.TR, oo.N, oo.k)
+        #oo._d.copyData(oo.y)
+
+        oo.Ns      = _N.ones(oo.TR, dtype=_N.int)*oo.N
+        oo.ks      = _N.ones(oo.TR, dtype=_N.int)*oo.k
+
+        oo.F     = _N.zeros((oo.k, oo.k))
+        _N.fill_diagonal(oo.F[1:, 0:oo.k-1], 1)
+        oo.F[0] =  _N.random.randn(oo.k)/_N.arange(1, oo.k+1)**2
+        oo.F[0, 0] = 0.8
+        oo.Fs    = _N.zeros((oo.TR, oo.k, oo.k))
+        for tr in xrange(oo.TR):
+            oo.Fs[tr] = oo.F
+        oo.Ik    = _N.identity(oo.k)
+        oo.IkN   = _N.tile(oo.Ik, (oo.N+1, 1, 1))
+
+        #  need TR
+        #  pr_x[:, 0]  empty, not used
+        #oo.p_x   = _N.empty((oo.TR, oo.N+1, oo.k, 1)) 
+        oo.p_x   = _N.empty((oo.TR, oo.N+1, oo.k)) 
+        oo.p_x[:, 0, 0] = 0
+        oo.p_V   = _N.empty((oo.TR, oo.N+1, oo.k, oo.k)) 
+        oo.p_Vi  = _N.empty((oo.TR, oo.N+1, oo.k, oo.k)) 
+        #oo.f_x   = _N.empty((oo.TR, oo.N+1, oo.k, 1)) 
+        oo.f_x   = _N.empty((oo.TR, oo.N+1, oo.k)) 
+        oo.f_V   = _N.empty((oo.TR, oo.N+1, oo.k, oo.k)) 
+        #oo.s_x   = _N.empty((oo.TR, oo.N+1, oo.k, 1)) 
+        oo.s_x   = _N.empty((oo.TR, oo.N+1, oo.k)) 
+        oo.s_V   = _N.empty((oo.TR, oo.N+1, oo.k, oo.k)) 
+
+        _N.fill_diagonal(oo.F[1:, 0:oo.k-1], 1)
+        oo.G       = _N.zeros((oo.k, 1))
+        oo.G[0, 0] = 1
+        oo.Q       = _N.empty(oo.TR)
+
 
         #  baseFN_inter   baseFN_comps   baseFN_comps
 
@@ -351,7 +383,7 @@ class mcmcARspk(mAR.mcmcAR):
         oo.AR2lims      = 2*_N.cos(radians)
 
         oo.smpx        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k))   #  start at 0 + u
-        oo.ws          = _N.empty((oo.TR, oo._d.N+1), dtype=_N.float)
+        oo.ws          = _N.empty((oo.TR, oo.N+1), dtype=_N.float)
 
         if oo.F_alfa_rep is None:
             oo.F_alfa_rep  = initF(oo.R, oo.Cs, oo.Cn, ifs=oo.ifs).tolist()   #  init F_alfa_rep
@@ -362,11 +394,22 @@ class mcmcARspk(mAR.mcmcAR):
         oo.q2          = _N.ones(oo.TR)*oo.q20
 
         oo.F0          = (-1*_Npp.polyfromroots(oo.F_alfa_rep)[::-1].real)[1:]
+        oo.Fs    = _N.zeros((oo.TR, oo.k, oo.k))
+
+        oo.F[0] = oo.F0
+        _N.fill_diagonal(oo.F[1:, 0:oo.k-1], 1)
+
+        for tr in xrange(oo.TR):
+            oo.Fs[tr] = oo.F
+
+
         ########  Limit the amplitude to something reasonable
         xE, nul = createDataAR(oo.N, oo.F0, oo.q20, 0.1)
         mlt  = _N.std(xE) / 0.5    #  we want amplitude around 0.5
         oo.q2          /= mlt*mlt
         xE, nul = createDataAR(oo.N, oo.F0, oo.q2[0], 0.1)
+
+
 
         w  =  5
         wf =  gauKer(w)
@@ -426,6 +469,7 @@ class mcmcARspk(mAR.mcmcAR):
         else:
             oo.Hbf = patsy.bs(_N.linspace(0, (oo.N+1), oo.N+1, endpoint=False), knots=_N.array([oo.h0_1, oo.h0_2, oo.h0_3, oo.h0_4, oo.h0_5, farknot]), include_intercept=True)    #  spline basisp
 
+
     def stitch_Hist(self, ARo, hcrv, stsM):  # history curve
         #  this has no direct bearing on sampling of history knots
         #  however, 
@@ -477,7 +521,6 @@ class mcmcARspk(mAR.mcmcAR):
         oo.smpx  = None
         oo.wts   = None
         oo.uts   = None
-        oo._d    = None
         oo.lfc   = None
         oo.rts   = None
         oo.zts   = None

@@ -2,10 +2,12 @@ import numpy as _N
 cimport numpy as _N
 #import kfcomMPmv_ram as _kfcom
 #import ram as _kfcom
-import kfcomMPmv_ram as _kfcom
+#import kfcomMPmv_ram as _kfcom
 #import kfcomMPmv as _kfcom_slow
 import time as _tm
 cimport cython
+from libc.math cimport sqrt
+
 
 import warnings
 warnings.filterwarnings("error")
@@ -22,50 +24,162 @@ f1
 zr       amp. at band stop
 """
 
+cdef long __N
+cdef long _Np1
+cdef long _k
+cdef long _TR
+
+def init(long N, long k, long TR):
+    global __N, _Np1, _k, _TR
+    _TR = TR
+    __N  =  N
+    _Np1= N+1
+    _k  = k
+
 ########################   FFBS
 #def armdl_FFBS_1itrMP(y, Rv, F, q2, N, k, fx00, fV00):   #  approximation
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def armdl_FFBS_1itrMP(args):   #  approximation
-    """
-    for Multiprocessor, aguments need to be put into a list.
-    """
-    y  = args[0]
-    Rv = args[1]
-    F  = args[2]
-    iF  = args[3]
-    q2 = args[4]
-    N  = args[5] 
-    cdef int k  = args[6]
-    fx00 = args[7]
-    fV00 = args[8]
+#def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, :, ::1] F, double[:, :, ::1] iF, double[::1] q2, long[::1] Ns, long[::1] ks, double[:, :, ::1] fx, double[:, :, :, ::1] fV, double[:, :, ::1] px, double[:, :, :, ::1] pV, double[:, :, ::1] smpx, double[:, :, ::1] K, double[:, ::1] sx_mv_norms, double[:, ::1] sx_norms, long TR, long Np1, long k):   #  approximation
+def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, :, ::1] F, double[:, :, ::1] iF, double[::1] q2, long[::1] Ns, long[::1] ks, double[:, :, ::1] fx, double[:, :, :, ::1] fV, double[:, :, ::1] px, double[:, :, :, ::1] pV, smpx, double[:, :, ::1] K):   #  approximation
+    global __N, _Np1, _k, _TR
+    cdef double* p_gau_obs  = &gau_obs[0, 0]
+    cdef double* p_gau_var  = &gau_var[0, 0]
+    cdef double* p_F        = &F[0, 0, 0]
+    cdef double* p_iF        = &iF[0, 0, 0]
+    cdef double* p_q2        = &q2[0]
+    #cdef double* p_fx        = &fx[0, 0, 0, 0]
+    cdef double* p_fx        = &fx[0, 0, 0]
+    cdef double* p_fV        = &fV[0, 0, 0, 0]
+    #cdef double* p_px        = &fx[0, 0, 0, 0]
+    cdef double* p_px        = &fx[0, 0, 0]
+    cdef double* p_pV        = &fV[0, 0, 0, 0]
+    cdef double* p_K        = &K[0, 0, 0]
+    cdef long* p_Ns        = &Ns[0]
+    cdef long* p_ks        = &ks[0]
+    cdef double[:, :, ::1] smpx_mv = smpx
+    cdef double* p_smpx            = &smpx_mv[0, 0, 0]
 
-    fx = _N.empty((N + 1, k, 1))
-    fV = _N.empty((N + 1, k, k))
-    fx[0] = fx00
-    fV[0] = fV00
-    GQGT   = _N.zeros((k, k))
-    GQGT[0, 0] = q2
+    sx_nz_vars  = _N.empty((_TR, _Np1))
+    sx_norms = _N.random.randn(_TR, _Np1)
+
+    cdef double[:, ::1] sx_nz_vars_mv = sx_nz_vars
+    cdef double[:, ::1] sx_norms_mv = sx_norms
+    cdef double* p_sx_nz_vars = &sx_nz_vars_mv[0, 0]
+    cdef double* p_sx_norms   = &sx_norms_mv[0, 0]
+
+    #  fx   TR x N x k
+    #  fV   TR x N x k x k
+
+    cdef long tr, i
+
+    for tr in xrange(_TR):
+        ##########  FF
+        #t1 = _tm.time()
+        #FFdv(&p_gau_obs[tr*_Np1], &p_gau_var[tr*_Np1], &p_F[tr*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_px[tr*_Np1*_k], &p_pV[tr*_Np1*_k*_k], &p_K[tr*_Np1*_k])
+        FFdv(gau_obs[tr], gau_var[tr], __N, _k, F[tr], q2[tr], fx[tr], fV[tr])
+        # print "output of old"
+        # print _N.array(fV[tr, 10])
+        # print _N.array(fx[tr, 10])
+        # print "----------------"
+        # print "output of new"
+        #FFdv_new(&p_gau_obs[tr*_Np1], &p_gau_var[tr*_Np1], &p_F[tr*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_px[tr*_Np1*_k], &p_pV[tr*_Np1*_k*_k], &p_K[tr*_Np1*_k])
+        # print _N.array(fV[tr, 10])
+        # print _N.array(fx[tr, 10])
+
+        # ##########  BS
+
+    ifV    = _N.linalg.inv(fV)    #  TR x 
+    cdef double[:, :, :, ::1] ifV_mv = ifV
+    cdef double* p_ifV            = &ifV_mv[0, 0, 0, 0]
+
+    ucmvnrms = _N.random.randn(_TR, _k)
+
+    try:
+        C       = _N.linalg.cholesky(fV[:, __N])
+    except _N.linalg.linalg.LinAlgError:
+        dmp = open("cholesky.dmp", "wb")
+        raise
+    #  smpx   is TR x (N+1)+2 x k.   we sample smpx[:, 2:] and fill the 0,1st with what whas in 3rd time bin.
+    smXN       = _N.einsum("njk,nk->nj", C, ucmvnrms) + fx[:, _Np1]
+
+    #smpx[:, _Np1+1] = smXN   #  not as a memview
+    smpx[:, __N] = smXN   #  not as a memview
 
 
-    ##########  FF
-    #t1 = _tm.time()
-    FFdv(y, Rv, N, k, F, q2, fx, fV)
-    #t2 = _tm.time()
-    #FFdv_slow(y, Rv, N, k, F, GQGT, fx, fV)
-    #t3 = _tm.time()
+    #  i want to pass smpx[tr, 2:]    which is 
+    for tr in xrange(_TR):
+        #BSvec(&p_iF[tr*_k*_k], &p_ifV[tr*_Np1*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_smpx[tr*(_Np1+2)*_k], &p_sx_nz_vars[tr*_Np1], &p_sx_norms[tr*_Np1])
+        BSvec(&p_iF[tr*_k*_k], &p_ifV[tr*_Np1*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_smpx[tr*_Np1*_k], &p_sx_nz_vars[tr*_Np1], &p_sx_norms[tr*_Np1])
+    #smpx[:, 1, 0:_k-1]   = smpx[:, 2, 1:]
+    #smpx[:, 0, 0:_k-2]   = smpx[:, 2, 2:]
 
-    # print "FFdv"
-    # print (t2-t1)
-    # print "FFdv-slow"
-    # print (t3-t2)
+    # return [smpls, fx, fV]
 
-    ##########  BS
-    smXN = _N.random.multivariate_normal(fx[N,:,0], fV[N], size=1)
-    smpls = _kfcom.BSvec(iF, N, k, q2, fx, fV, smXN)
-    #_kfcom_slow.BSvec(F, N, k, GQGT, fx, fV, smXN)
 
-    return [smpls, fx, fV]
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+#cdef void FFdv(double[::1] y, double[::1] Rv, N, long k, double[:, ::1] F, double q2, _fx, _fV):   #  approximate KF    #  k==1,dynamic variance
+cdef void FFdv_new(double* p_gau_obs, double* p_gau_var, double* p_F, double q2, double* p_fx, double* p_fV, double* p_px, double* p_pV, double* p_K):   #  approximate KF    #  k==1,dynamic variance
+    global __N, _k, _Np1
+    #  do this until p_V has settled into stable values
+
+    cdef long n, i, j, ii, jj, nKK, nK, ik, n_m1_KK, n_m1_K, i_m1_K, iik
+
+    cdef double dd = 0, val, Kfac, pKnKi
+
+    for n from 1 <= n < _Np1:
+        nKK = n * _k * _k
+        nK  = n*_k
+        n_m1_KK = (n-1) * _k * _k
+        n_m1_K = (n-1) * _k
+        dd = 0
+        #  prediction mean  (naive and analytic method are the same)
+        for i in xrange(1, _k):#  use same loop to copy and do dot product
+            dd             += p_F[i]*p_fx[n_m1_K + i]
+            p_px[nK + i] = p_fx[n_m1_K + (i-1)] # shift older state
+        p_px[nK]          = dd + p_F[0]*p_fx[n_m1_K]  #  1-step prediction 
+
+
+        #####  covariance, 1-step prediction
+        ####  upper 1x1
+        val = 0
+        for ii in xrange(_k):   
+            iik = ii*_k
+            val += p_F[ii]*p_F[ii]*p_fV[n_m1_KK + iik + ii]
+            for jj in xrange(ii+1, _k):
+                val += 2*p_F[ii]*p_F[jj]*p_fV[n_m1_KK + iik+jj]
+        p_pV[nKK]  = val + q2
+        ####  lower k-1 x k-1
+        for ii in xrange(1, _k):
+            for jj in xrange(ii, _k):
+                p_pV[nKK+ ii*_k+ jj] = p_pV[nKK+ jj*_k+ ii] = p_fV[n_m1_KK + (ii-1)*_k + jj-1]
+        ####  (1 x k-1) and (k-1 x 1)
+        #for ii in xrange(1, k):    #  get rid of 1 loop
+            val = 0
+            for jj in xrange(_k):
+                val += p_F[jj]*p_fV[n_m1_KK+ jj*_k + ii-1]
+            p_pV[nKK + ii] = val
+            p_pV[nKK + ii*_k] = val
+        ######  Kalman gain
+        Kfac  = 1. / (p_pV[nKK] + p_gau_var[n])  #  scalar
+        for i in xrange(_k):
+            #p_K[nK + i] = p_pV[nKK + i*k] * Kfac
+            pKnKi = p_pV[nKK + i*_k] * Kfac
+
+            p_fx[nK+i] = p_px[nK+ i] + pKnKi*(p_gau_obs[n] - p_px[nK])
+
+            for j in xrange(i, _k):
+                p_fV[nKK+i*_k+ j] = p_pV[nKK+ i*_k+ j] - p_pV[nKK+j]*pKnKi
+                p_fV[nKK+j*_k + i] = p_fV[nKK+i*_k+ j]
+            p_K[nK+i] = pKnKi
+            
+    
+    #dat = _N.empty((N+1, 2))
+    #dat[:, 0] = fx[:, 0, 0]
+    #dat[:, 1] = fV[:, 0, 0]
+
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
@@ -76,7 +190,7 @@ def FFdv(double[::1] y, double[::1] Rv, N, long k, double[:, ::1] F, double q2, 
     px = _N.empty((N + 1, k, 1))    #  naive and analytic calculated same way
     pV = _N.empty((N + 1, k, k))
 
-    cdef double[:, :, ::1] fx = _fx
+    cdef double[:, ::1] fx = _fx
     cdef double[:, :, ::1] fV = _fV
     cdef double* p_y  = &y[0]
     cdef double* p_Rv  = &Rv[0]
@@ -90,7 +204,7 @@ def FFdv(double[::1] y, double[::1] Rv, N, long k, double[:, ::1] F, double q2, 
     #  IKH
     
     cdef double* p_F              = &F[0, 0]
-    cdef double* p_fx              = &fx[0, 0, 0]
+    cdef double* p_fx              = &fx[0, 0]
     cdef double* p_fV              = &fV[0, 0, 0]
 
     cdef double[:, :, ::1] pxmv   = px
@@ -146,110 +260,54 @@ def FFdv(double[::1] y, double[::1] Rv, N, long k, double[:, ::1] F, double q2, 
                 p_fV[nKK+i*k+ j] = p_pV[nKK+ i*k+ j] - p_pV[nKK+j]*pKnKi
                 p_fV[nKK+j*k + i] = p_fV[nKK+i*k+ j]
             p_K[nK+i] = pKnKi
-            
-    
-    dat = _N.empty((N+1, 2))
-    dat[:, 0] = fx[:, 0, 0]
-    dat[:, 1] = fV[:, 0, 0]
-
-    #_N.savetxt("fxfV-fast", dat, fmt="%.4f")
-    
 
 
+###  Most expensive operation here is the SVD
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef void BSvec(double* p_iF, double *p_ifV, double q2, double* p_fx, double* p_fV, double* p_smpx, double* p_sx_nz_vars, double* p_sx_norms):
+    #  Backward sampling.
+    #
+    #  1)  find covs - only requires values calculated from filtering step
+    #  2)  Only p,p-th element in cov mat is != 0.
+    #  3)  genearte 0-mean normals from variances computed in 2)
+    #  4)  calculate means, add to 0-mean norms (backwds samp) to p-th component
+    # 
+    global __N, _k, _Np1
+    cdef int n, i, j, ii, jj, nKK, nK, ik, n_m1_KK, i_m1_K, iik, kmk, km1, kp1, np1k, kk
+    cdef double trm1, trm2, trm3, c, Fs
 
-def FFdv_slow(y, Rv, N, k, F, GQGT, fx, fV):   #  approximate KF    #  k==1,dynamic variance
-    #print "FFdv"
-    #  do this until p_V has settled into stable values
-    H       = _N.zeros((1, k))          #  row vector
-    H[0, 0] = 1
-    q2 = GQGT[0, 0]
+    kmk = (_k-1)*_k
+    km1 = _k-1
+    kp1 = _k+1
+    kk  = _k*_k
 
-    Ik      = _N.identity(k)
-    px = _N.empty((N + 1, k, 1))
-    pV = _N.empty((N + 1, k, k))
+    ####   ANALYTICAL.  
+    cdef double iF_p1_2     = p_iF[kmk]*p_iF[kmk]
 
-    K     = _N.empty((N + 1, k, 1))
-    """
-    temporary storage
-    """
-    IKH   = _N.eye(k)        #  only contents of first column modified
-    VFT   = _N.empty((k, k))
-    FVFT  = _N.empty((k, k))
-    KyHpx = _N.empty((k, 1))
+    for j in xrange(__N):
+        p_sx_nz_vars[j] = sqrt((q2*iF_p1_2)/(1+q2*p_ifV[j*kk + kmk + km1]*iF_p1_2))*p_sx_norms[j]
 
-    #  need memory views for these
-    #  F, fx, px need memory views
-    #  K, KH
-    #  IKH
-    
-    cdef double[:, ::1] Fmv       = F
-    cdef double[:, :, ::1] fxmv   = fx
-    cdef double[:, :, ::1] pxmv   = px
-    cdef double[:, :, ::1] pVmv   = pV
-    cdef double[::1] Rvmv   = Rv
-    cdef double[:, :, ::1] Kmv    = K
-    cdef double[:, ::1] IKHmv     = IKH
+    for n from __N > n >= 0:
+        nKK = n*kk
+        nK  = n*_k
+        np1k = (n+1)*_k
 
-    cdef _N.intp_t n, i
+        c = 1 + q2*p_ifV[nKK + kmk + km1]*iF_p1_2
 
-    cdef double dd = 0
-    for n from 1 <= n < N + 1:
-        dd = 0
-        for i in xrange(1, k):#  use same loop to copy and do dot product
-            dd += Fmv[0, i]*fxmv[n-1, i, 0]
-            pxmv[n, i, 0] = fxmv[n-1, i-1, 0]
-        pxmv[n, 0, 0] = dd + Fmv[0, 0]*fxmv[n-1, 0, 0]
+        Fs = 0
+        trm2 = 0
+        trm3 = 0
 
-        _N.dot(fV[n - 1], F.T, out=VFT)
-        _N.dot(F, VFT, out=pV[n])          #  prediction
-        pVmv[n, 0, 0]    += q2
-        mat  = 1 / (pVmv[n, 0, 0] + Rvmv[n])  #  scalar
+        for ik in xrange(km1):  #  shift
+            p_smpx[nK + ik] = p_smpx[np1k + ik+1]
+            trm2 += p_smpx[np1k + ik+1]*p_ifV[nKK + kmk + ik]
+            Fs += p_iF[kmk + ik]*p_smpx[np1k+ ik]
+            trm3 += p_fx[nK + ik]*p_ifV[nKK + kmk + ik]
+        Fs += p_iF[kmk + km1]*p_smpx[np1k+ km1]
+        trm3 += p_fx[nK + km1]*p_ifV[nKK + kmk + km1]
 
-        K[n, :, 0] = pV[n, :, 0] * mat
+        trm1 = Fs*p_ifV[nKK + kmk+ km1]
 
-        _N.multiply(K[n], y[n] - pxmv[n, 0, 0], out=KyHpx)
-        _N.add(px[n], KyHpx, out=fx[n])
-
-        # (I - KH), KH is zeros except first column
-        IKHmv[0, 0] = 1 - Kmv[n, 0, 0]
-        for i in xrange(1, k):
-            IKHmv[i, 0] = -Kmv[n, i, 0]
-        # (I - KH)
-        _N.dot(IKH, pV[n], out=fV[n])
-
-    dat = _N.empty((N+1, 2))
-    dat[:, 0] = fx[:, 0, 0]
-    dat[:, 1] = fV[:, 0, 0]
-
-    _N.savetxt("fxfV-slow", dat, fmt="%.4f")
-
-
-def FF1dv(_d, offset=0):   #  approximate KF    #  k==1,dynamic variance
-    GQGT    = _d.G[0,0]*_d.G[0, 0] * _d.Q
-    k     = _d.k
-    px    = _d.p_x
-    pV    = _d.p_V
-    fx    = _d.f_x
-    fV    = _d.f_V
-    Rv    = _d.Rv
-    K     = _d.K
-
-    #  do this until p_V has settled into stable values
-
-    for n from 1 <= n < _d.N + 1:
-        px[n,0,0] = _d.F[0,0] * fx[n - 1,0,0]
-#        pV[n,0,0] = _d.F[0,0] * fV[n - 1,0,0] * _d.F.T[0,0] + GQGT
-        pV[n,0,0] = _d.F[0,0] * fV[n - 1,0,0] * _d.F[0,0] + GQGT
-        #_d.p_Vi[n,0,0] = 1/pV[n,0,0]
-
-#        mat  = 1 / (_d.H[0,0]*pV[n,0,0]*_d.H[0,0] + Rv[n])
-        mat  = 1 / (pV[n,0,0] + Rv[n])
-#        K[n,0,0] = pV[n]*_d.H[0,0]*mat
-        K[n,0,0] = pV[n,0,0]*mat
-#        fx[n,0,0]    = px[n,0,0] + K[n,0,0]*(_d.y[n] - offset[n] - _d.H[0,0]* px[n,0,0])
-#        fx[n,0,0]    = px[n,0,0] + K[n,0,0]*(_d.y[n] - _d.H[0,0]* px[n,0,0])
-        fx[n,0,0]    = px[n,0,0] + K[n,0,0]*(_d.y[n] - px[n,0,0])
-#        fV[n,0,0] = (1 - K[n,0,0]* _d.H[0,0])* pV[n,0,0]
-        fV[n,0,0] = (1 - K[n,0,0])* pV[n,0,0]
-
-
+        p_smpx[nK + km1]= Fs - q2*iF_p1_2*(trm1 + trm2 - trm3)/c + p_sx_nz_vars[n]

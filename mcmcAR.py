@@ -22,7 +22,10 @@ class mcmcAR:
 
     dt            = None
 
-    y             = None
+    y             = None     #  0 1 or counts
+
+    gau_obs       = None     #  after PG variables, y turned into gaussian obs
+    gau_var       = None     #  after PG variables, variance of gaussian obs
     kp            = None
 
     x             = None   #  true latent state
@@ -35,8 +38,32 @@ class mcmcAR:
     x00           = None
     V00           = None
 
-    #  
-    _d            = None
+    N     = None;    #  # of data for each trial
+    Ns    = None;    #  # of data for each trial
+    TR    = None;    #  # of trials
+    #  KF params
+    p_x   = None;    p_V   = None;    p_Vi  = None
+    f_x   = None;    f_V   = None
+    s_x   = None;    s_V   = None
+    J     = None
+    Ik    = None
+
+    #  params for AR state
+    k     = None;
+    ks    = None;
+    F     = None
+    Fs    = None
+    Q     = None;
+    G     = None
+
+    #  generative and generated data
+    x     = None;
+
+    #  original spks
+    dN    = None
+
+    f_x           = None
+
 
     ##### PRIORS
     #  q2  --  Inverse Gamma prior
