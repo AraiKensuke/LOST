@@ -45,7 +45,7 @@ Next, create a directory where your data file xprbsdN.dat will be.  If you're cr
 ##  Creating simulated data
 
 ##  Running
-Whether using real or simulated data, the template `cpRunTemplate`
+Whether using real or simulated data, the template `cpRunTemplate` will create a file that looks like "wp_<tr0>-<tr1>_<C>_<R>.py" in the "RESULTS/inferosc" directory.  The user should specify the range of trials to use and the number of complex and real roots.  4 and 1 are safe bets for the umber of roots.
 
 
 
