@@ -18,11 +18,30 @@ LOST is written in python and cython, and requires python2.7, matplotlib, numpy,
 LOST data is a flat ASCII file.  If the data is a simulation where we know the modulatory signal and the conditional intensity function (CIF)
 simulation data
 x, CIF, spks
-LINK to example data file
+[simulated data example](examples1.html)
 real data
 x, filtered x, spks, ph
-LINK to example data file
+[real data example](examples2.html)
 
 however, we caution that the ONLY data actually used for LOST model fitting, is the spikes
 
 ##  Setup
+First, environment variables need to be set.  If you're using Linux or OS X and also bash or sh, in he .profile file
+
+```
+export __LOST_BaseDir__="/Users/arai/Workspace/LOST"
+export __LOST_ResultDir__="${__LOST_BaseDir__}/Results"
+```
+To run LOST, go to RESULTS directory
+```
+import os
+__LOST_BaseDir__   = os.getenv("__LOST_BaseDir__", "")
+__LOST_ResultDir__ = os.getenv("__LOST_ResultDir__", "")
+```
+
+##  Running
+
+##  Creating simulated data
+
+
+
