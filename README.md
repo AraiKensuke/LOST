@@ -42,9 +42,12 @@ __LOST_ResultDir__ = os.getenv("__LOST_ResultDir__", "")
 Next, create a directory where your data file xprbsdN.dat will be.  If you're creating simulated data, if you rename the startup script `sim1.py`, a directory called `sim` will be automatically created for you, and it will contain the created `xprbsdN.dat`.
 
 
-##  Running
-
 ##  Creating simulated data
 
+##  Running
+Whether using real or simulated data, the template `cpRunTemplate`
 
 
+
+##  TODO
+As it stands, LOST is computationally expensive, and we might need an hour or so of sampling for inference to be made.  A significant bottle neck has been identified (inverting the covariance matrix for the forward filter in FFBS), and a possible solution is to parallelization, since all the trials are independent.  However, this would require the use of a non-GIL matrix inversion function (currently GIL numpy.linalg.inv), we would need to go directly to LAPACK.  However, LAPACK is a bit tricky for novices to use directly, but we hope to implement this soon.
