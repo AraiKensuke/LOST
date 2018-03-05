@@ -39,6 +39,9 @@ __LOST_BaseDir__   = os.getenv("__LOST_BaseDir__", "")
 __LOST_ResultDir__ = os.getenv("__LOST_ResultDir__", "")
 ```
 
+Next, create a directory where your data file xprbsdN.dat will be.  If you're creating simulated data, if you rename the startup script `sim1.py`, a directory called `sim` will be automatically created for you, and it will contain the created `xprbsdN.dat`.
+
+
 ##  Running
 
 ##  Creating simulated data
