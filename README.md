@@ -1,45 +1,28 @@
-##  Latent Oscillation in Spike Train (LOST)
-#  (Arai and Kass, PLoS computational biology 2017).  
-The LOST code is in the file mcmcARp_ram.py.  As explained in the paper, LOST automatically chooses TAE and spike history knot locations.  As such, it assumes a particular directory structure.
+#  Latent Oscillation in Spike Train (LOST)
 
-Packages
-PyPG
-poly-gamma sampler
-arai_utils
+#####  Kensuke Arai and Robert E. Kass
+
+##  Introduction
+The timing of spikes in a neural spike train are sometimes observed to fire preferentially at certain phases of oscillatory components of brain signals such as the LFP or EEG, ie may be said to have an oscillatory modulation.    However, the temporal relationship is not exact, and there exists considerable variability in the spike-phase relationship.  Because the spikes themselves are often temporally sparse, assessing whether the spike train has oscillatory modulation, is challenging.  Further, the oscillatory modulation may not be uniformly present throughout the entire experiment.  We therefore developed a method to detect and also infer the instantaneous phase of the oscillation in the spike train, and also detection for non-stationarity in the modulation of the spikes.
+
+##  Necessary packages
 PP-AR
+PP-AR/runTemplate.py
+PP-AR/runTemplateBM.py
+PyPG
 
+##  Setup
+LOST is written in python and cython, and requires python2.7, matplotlib, numpy, scipy, patsy.  pyPG is primarily written in C++, so his will need to be compiled.
 
+##  Data format
+LOST data is a flat ASCII file.  If the data is a simulation where we know the modulatory signal and the conditional intensity function (CIF)
+simulation data
+x, CIF, spks
+LINK to example data file
+real data
+x, filtered x, spks, ph
+LINK to example data file
 
-Directory structure:
-RESDIR=$(basedir)/Results/
-PYDIR=$(basedir)/pyscripts/
+however, we caution that the ONLY data actually used for LOST model fitting, is the spikes
 
-basedir is an environment variable.
-
-In $RESDIR, there is a generator of a run script.  
-
-cpRunTemplate <wp or np> <tr#1> <tr#2> <# C> <# R> 
-
-creates a file called
-wp_tr1-tr2_#C_#R.py 
-
-Edit this file to change # of Gibbs iterations, length of each trial, how often to plot intermediate results etc.
-
-~$ cd $(RESDIR)
-$(RESDIR)$ python wp_tr1-tr2_#C_#R.py 
-
-This creates directory
-
-$(RESDIR)/wp_tr1-tr2_#C_#R
-
-
-
-Data format:
-spike train in file named "xprbsdN.dat"
-File format is 3 * (total trials) columns x N time points per trial
-
-
-
-Output:
-$(RESDIR)/wp_tr1-tr2_#C_#R/smpls-N.dump
-
+##  Setup
