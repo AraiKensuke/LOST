@@ -17,46 +17,21 @@ PP-AR
 [PyPG](https://github.com/AraiKensuke/pyPG)  Polya-Gamma random variables
 
 ##  Recommended packages 
-LOST usage examples
-
-
-##  Setup
-LOST is written in python and cython, and requires python2.7, matplotlib, numpy, scipy, patsy.  pyPG is primarily written in C++, so his will need to be compiled and built separately.
-
-##  Data format
-LOST data is a flat ASCII file.  If the data is a simulation where we know the modulatory signal and the conditional intensity function (CIF)
-simulation data
-x, CIF, spks
-[simulated data example](examples1.html)
-real data
-x, filtered x, spks, ph
-[real data example](examples2.html)
-
-however, we caution that the ONLY data actually used for LOST model fitting, is the spikes
+[LOST_Results_exmplr](https://github.com/AraiKensuke/LOST_Results_exmplr)  run-script generator for LOST, as well as examples of a datafile and a HOWTO of how to run LOST and format input data.
 
 ##  Setup
-First, environment variables need to be set.  If you're using Linux or OS X and also bash or sh, in he .profile file
+LOST is written in python and cython, and requires python2.7, matplotlib, numpy, scipy, patsy and pyPG.  [pyPG](https://github.com/AraiKensuke/pyPG) is primarily written in C++ with python wrappers, and comes with its own python setup script, so please build it separately.
+
+Once pyPG is built, LOST can be built and installed.  LOST is mainly written in python, with 1 cython file.  Choosing a destination directory `$LOSTDIR` and extract (doing the tar.gz case here)
 
 ```
-export __LOST_BaseDir__="/Users/arai/Workspace/LOST"
-export __LOST_ResultDir__="${__LOST_BaseDir__}/Results"
-```
-To run LOST, go to RESULTS directory
-```
-import os
-__LOST_BaseDir__   = os.getenv("__LOST_BaseDir__", "")
-__LOST_ResultDir__ = os.getenv("__LOST_ResultDir__", "")
+gunzip LOST-x.tar.gz
+tar xf LOST-x.tar
+cd LOST-x
+python setup.py install
 ```
 
-Next, create a directory where your data file xprbsdN.dat will be.  If you're creating simulated data, if you rename the startup script `sim1.py`, a directory called `sim` will be automatically created for you, and it will contain the created `xprbsdN.dat`.
-
-
-##  Creating simulated data
-
-##  Running
-Whether using real or simulated data, the template `cpRunTemplate` will create a file that looks like "wp_<tr0>-<tr1>_<C>_<R>.py" in the "RESULTS/inferosc" directory.  The user should specify the range of trials to use and the number of complex and real roots.  4 and 1 are safe bets for the umber of roots.
-
-
+It is now recommended to obtain [LOST_Results_exmplr](https://github.com/AraiKensuke/LOST_Results_exmplr).  It will walk you through how to set up a LOST analysis.
 
 ##  TODO
 As it stands, LOST is computationally expensive, and we might need an hour or so of sampling for inference to be made.  A significant bottle neck has been identified (inverting the covariance matrix for the forward filter in FFBS), which takes around 80% of the processing time, and a possible solution is to parallelization, since all the trials are independent.  However, this would require the use of a non-GIL matrix inversion function (currently GIL numpy.linalg.inv), we would need to go directly to LAPACK.  However, LAPACK is a bit tricky for novices to use directly, but we hope to implement this soon.

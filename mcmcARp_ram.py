@@ -29,7 +29,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
     k             = None
     Cn            = None;    Cs            = None;    C             = None
     kntsPSTH      = None;    dfPSTH        = None
-    ID_q2         = True
     use_prior     = _cd.__COMP_REF__
     AR2lims       = None
     F_alfa_rep    = None
