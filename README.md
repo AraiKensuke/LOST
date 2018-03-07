@@ -14,7 +14,7 @@ PP-AR
 
 [patsy](https://patsy.readthedocs.io/en/latest/)   used for splines to describe trial-averaged effect
 
-[PyPG](https://github.com/AraiKensuke/pyPG)  Polya-Gamma random variables
+[pyPG](https://github.com/AraiKensuke/pyPG)  Polya-Gamma random variables
 
 ##  Recommended packages 
 [LOST_Results_exmplr](https://github.com/AraiKensuke/LOST_Results_exmplr)  run-script generator for LOST, as well as examples of a datafile and a HOWTO of how to run LOST and format input data.
@@ -22,13 +22,20 @@ PP-AR
 ##  Setup
 LOST is written in python and cython, and requires python2.7, matplotlib, numpy, scipy, patsy and pyPG.  [pyPG](https://github.com/AraiKensuke/pyPG) is primarily written in C++ with python wrappers, and comes with its own python setup script, so please build it separately.
 
-Once pyPG is built, LOST can be built and installed.  LOST is mainly written in python, with 1 cython file.  Choosing a destination directory `$LOSTDIR` and extract (doing the tar.gz case here)
+Once pyPG is built, LOST can be built and installed.  LOST is mainly written in python, with 1 cython file.  Choosing a destination directory `$DESTDIR` and extract (doing the tar.gz case here)
 
 ```
-gunzip LOST-x.tar.gz
-tar xf LOST-x.tar
-cd LOST-x
+cd $DESTDIR
+gunzip LOST-verX.tar.gz
+tar xf LOST-verX.tar
+cd LOST-verX
 python setup.py install
+```
+
+After install and build are successful, set the `$PYTHONPATH` in shell script so that LOST may be run from directories outside of the install directory.  In the case of bash or shell, add the line
+
+```
+PYTHONPATH=${PYTHONPATH}:${DESTDIR}/LOST-verX"
 ```
 
 It is now recommended to obtain [LOST_Results_exmplr](https://github.com/AraiKensuke/LOST_Results_exmplr).  It will walk you through how to set up a LOST analysis.
