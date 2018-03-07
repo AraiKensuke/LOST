@@ -5,7 +5,7 @@ from mcmcARpPlot import plotWFandSpks
 import matplotlib.pyplot as _plt
 
 from kflib import createDataPPl2, savesetMT, savesetMTnosc, createDataAR, createFlucOsc
-from kassdirs import resFN, datFN
+from LOSTdirs import resFN, datFN
 import numpy as _N
 import pickle as _pk
 import warnings

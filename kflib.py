@@ -1,4 +1,4 @@
-from kassdirs import resFN
+from LOSTdirs import resFN
 import numpy as _N
 from ARcfSmplFuncs import ampAngRep, dcmpcff, betterProposal
 import matplotlib.pyplot as _plt

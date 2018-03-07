@@ -7,7 +7,9 @@ class mcmcAR:
     rs            = -1
     bFixF         = False
     bFixH         = False
-    burn          = None;    NMC           = None
+    ITERS         = None
+    minITERS      = 3000
+    stationaryDuration  = 4000
     t0            = None;    t1            = None
     useTrials     = None;    restarts      = 0
 

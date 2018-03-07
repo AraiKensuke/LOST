@@ -8,7 +8,7 @@ import logerfc as _lfc
 import commdefs as _cd
 import os
 import numpy as _N
-from kassdirs import resFN, datFN
+from LOSTdirs import resFN, datFN
 import re as _re
 from ARcfSmplFuncs import ampAngRep, buildLims, FfromLims, dcmpcff, initF
 import numpy.polynomial.polynomial as _Npp
@@ -636,7 +636,7 @@ class mcmcARspk(mAR.mcmcAR):
         dmp.close()
 
     
-    def dump_smps(self, pcklme=None, dir=None, toiter=None):
+    def dump_smps(self, frm, pcklme=None, dir=None, toiter=None):
         oo    = self
         if pcklme is None:
             pcklme = {}
@@ -644,6 +644,7 @@ class mcmcARspk(mAR.mcmcAR):
         toiter         = oo.NMC + oo.burn if (toiter is None) else toiter
         if oo.bpsth:
             pcklme["aS"]   = oo.smp_aS[0:toiter]  #  this is last
+        pcklme["frm"]    = frm
         pcklme["B"]    = oo.B
         pcklme["q2"]   = oo.smp_q2[:, 0:toiter]
         pcklme["amps"] = oo.amps[0:toiter]
@@ -659,7 +660,7 @@ class mcmcARspk(mAR.mcmcAR):
             pcklme["Hbf"]    = oo.Hbf
             pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter]
         if oo.doBsmpx:
-            pcklme["Bsmpx"]    = oo.Bsmpx
+            pcklme["Bsmpx"]    = oo.Bsmpx[:, 0:toiter/oo.BsmpxSkp]
             
 
         print "saving state in %s" % oo.outSmplFN

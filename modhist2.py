@@ -1,4 +1,4 @@
-from kassdirs import resFN
+from LOSTdirs import resFN
 import scipy.signal as _ssig
 import re as _re
 from filter import lpFilt, bpFilt, base_q4atan, gauKer
