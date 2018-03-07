@@ -1,7 +1,7 @@
 #  Latent Oscillation in Spike Train (LOST)
 
 #####  Kensuke Arai and Robert E. Kass
-[Inferring oscillatory modulation in neural spike trains](http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005596)
+[Inferring oscillatory modulation in neural spike trains](http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005596) (2017)
 
 ##  Introduction
 The timing of spikes in a neural spike train are sometimes observed to fire preferentially at certain phases of oscillatory components of brain signals such as the LFP or EEG, ie may be said to have an oscillatory modulation.    However, the temporal relationship is not exact, and there exists considerable variability in the spike-phase relationship.  Because the spikes themselves are often temporally sparse, assessing whether the spike train has oscillatory modulation, is challenging.  Further, the oscillatory modulation may not be uniformly present throughout the entire experiment.  We therefore developed a method to detect and also infer the instantaneous phase of the oscillation in the spike train, and also detection for non-stationarity in the modulation of the spikes.
