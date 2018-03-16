@@ -13,7 +13,7 @@ matplotlib
 
 cython
 
-PP-AR
+LOST
 
 [patsy](https://patsy.readthedocs.io/en/latest/)   used for splines to describe trial-averaged effect
 
