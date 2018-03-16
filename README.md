@@ -44,6 +44,8 @@ PYTHONPATH=${PYTHONPATH}:${DESTDIR}/LOST-verX"
 It is now recommended to obtain [LOST_Results_exmplr](https://github.com/AraiKensuke/LOST_Results_exmplr).  It will walk you through how to set up a LOST analysis.
 
 ##  TODO
-As it stands, LOST is computationally expensive, and we might need an hour or so of sampling for inference to be made.  A significant bottle neck has been identified (inverting the covariance matrix for the forward filter in FFBS), which takes around 80% of the processing time, and a possible solution is to parallelization, since all the trials are independent.  However, this would require the use of a non-GIL matrix inversion function (currently GIL numpy.linalg.inv), we would need to go directly to LAPACK.  However, LAPACK is a bit tricky for novices to use directly, but we hope to implement this soon.
+As it stands, LOST is computationally expensive, and we might need an hour or so of sampling for inference to be made, depending on how much data there is and how strong the modulation to an oscillation is.  If its strong, LOST might find it immediately, and require a few minutes - however if weak, it may take a while for us to draw enough Gibbs samples to draw a conclusion.
+
+A significant bottle neck has been identified (inverting the covariance matrix for the forward filter in FFBS), which takes around 80% of the processing time, and a possible solution is to parallelization, since all the trials are independent.  However, this would require the use of a non-GIL matrix inversion function (currently GIL numpy.linalg.inv), we would need to go directly to LAPACK.  However, LAPACK is a bit tricky for novices to use directly, but we hope to implement this soon.
 
 
