@@ -1,12 +1,12 @@
 import numpy as _N
 import scipy.signal as _ssig
 import scipy.stats as _ss
-from ARcfSmplFuncs import dcmpcff
+#from ARcfSmplFuncs import dcmpcff
 import matplotlib.pyplot as _plt
-from filter import gauKer, lpFilt
+#from filter import gauKer, lpFilt
 import scipy.signal as _ssig
 import myColors as mC
-import modhist2 as mh2
+#import modhist2 as mh2
 from tmrsclTest import timeRescaleTest, zoom
 
 def histPhase0_phaseInfrd(mARp, _mdn, t0=None, t1=None, bRealDat=False, trials=None, filtParams=None, maxY=None, yticks=None, fn=None, normed=False):
@@ -71,7 +71,7 @@ def histPhase0_phaseInfrd(mARp, _mdn, t0=None, t1=None, bRealDat=False, trials=N
     Npts = len(pInfrdAt0A)
     R2   = (1./(Npts*Npts)) * (_N.sum(_N.cos(2*_N.pi*pInfrdAt0A))**2 + _N.sum(_N.sin(2*_N.pi*pInfrdAt0A))**2)
     _plt.hist(pInfrdAt0, bins=_N.linspace(0, 2, 41), color=mC.hist1, edgecolor=mC.hist1, normed=normed)
-    print "maxY!!!  %f" % maxY
+    print("maxY!!!  %f" % maxY)
     if (maxY is not None):
         _plt.ylim(0, maxY)
         
@@ -140,7 +140,7 @@ def filterByFsAmps(mARp, flow, fhi, alow=0.9, ahigh=1, t0=None, t1=None):
                     (mARp.amps[t0:t1, 0] > alow) & (mARp.amps[t0:t1, 0] < ahigh))
     return inds[0] + t0
 
-
+"""
 def getComponents(mARp):
     TR    = mARp.TR
     NMC   = mARp.NMC
@@ -171,7 +171,7 @@ def getComponents(mARp):
                 #for n in xrange(1, ddN+3):
                 #    zt[tr, i, n-1, z] = cf1*mARp.wts[tr, it, z, n] - cf2*mARp.wts[tr, it, z, n-1]
     return rt, zt
-
+"""
 
 ###############################################
 def plotWFandSpks(mARp, zts0, sFilename="latnt,GrdTr,Spks", tMult=1, intv=None, sTitle=None, tr=None, cls2EvryO=None, bRealDat=False, norm=False):
@@ -287,7 +287,7 @@ def plotPSTH(mARp):
     return meanPSTH
 
 def plotFsAmp(mARp, tr0=None, tr1=None, xticks=None, yticksFrq=None, yticksMod=None, yticksAmp=None, fMult=1, dir=None, fn="fs_amps", ylimAmp=None):
-    __plotFsAmp(mARp.burn, mARp.NMC, mARp.fs, mARp.amps, mARp.mnStds, tr0=tr0, tr1=tr1, xticks=xticks, yticksFrq=yticksFrq, yticksMod=yticksMod, yticksAmp=yticksAmp, fMult=fMult, dir=dir, fn=fn, ylimAmp=ylimAmp)
+    __plotFsAmp(mARp.minITERS, mARp.NMC, mARp.fs, mARp.amps, mARp.mnStds, tr0=tr0, tr1=tr1, xticks=xticks, yticksFrq=yticksFrq, yticksMod=yticksMod, yticksAmp=yticksAmp, fMult=fMult, dir=dir, fn=fn, ylimAmp=ylimAmp)
 
 def plotFsAmpDUMP(lm, burn, NMC, tr0=None, tr1=None, xticks=None, yticksFrq=None, yticksMod=None, yticksAmp=None, fMult=1, dir=None, fn="fs_amps", ylimAmp=None):
     fs     = lm["fs"]
@@ -461,15 +461,15 @@ def findStationaryMCMCIters(mARp, win=30):
     bigSkip = _N.where(cons > 1)
 
     if len(bigSkip[0]) > 0.2*len(cons):
-        print "Not fairly smooth"
+        print("Not fairly smooth")
     else:
-        print "looks like it hit stationary state"
+        print("looks like it hit stationary state")
         if its[keep[-1]] == bNMC - 2*win:
             lastTR = bNMC
         else:
             lastTR = its[keep[-1]] + win
         firstTR = its[keep[0]]
-        print "use from trial=%(1)d  to %(2)d" % {"1" : firstTR, "2" : lastTR}
+        print("use from trial=%(1)d  to %(2)d" % {"1" : firstTR, "2" : lastTR})
 
     return firstTR, lastTR
 
@@ -600,7 +600,8 @@ def setTicksAndLims(xlabel=None, ylabel=None, xticks=None, yticks=None, xticksD=
             _plt.ylim(0, ylim)
 
     if xlabel is not None:
-        _plt.xlabel(xlabel, fontsize=labelFS)
+            _plt.xlabel(xlabel, fontsize=labelFS)
+            
     if ylabel is not None:
         _plt.ylabel(ylabel, fontsize=labelFS)
 
@@ -645,8 +646,12 @@ def arbitraryAxes(ax, axesVis=[True, True, True, True], xtpos="bottom", ytpos="l
     ax.xaxis.set_label_position(xtpos)
     ax.yaxis.set_label_position(ytpos)
 
-    ax.spines["left"].axis.axes.tick_params(direction="inward", width=2)
-    ax.spines["bottom"].axis.axes.tick_params(direction="outward", width=2)
-    ax.spines["right"].axis.axes.tick_params(direction="outward", width=2)
-    ax.spines["top"].axis.axes.tick_params(direction="outward", width=2)
+    #ax.spines["left"].axis.axes.tick_params(direction="inward", width=2)
+    #ax.spines["bottom"].axis.axes.tick_params(direction="outward", width=2)
+    #ax.spines["right"].axis.axes.tick_params(direction="outward", width=2)
+    #ax.spines["top"].axis.axes.tick_params(direction="outward", width=2)
+    ax.spines["left"].axis.axes.tick_params(direction="in", width=2)
+    ax.spines["bottom"].axis.axes.tick_params(direction="out", width=2)
+    ax.spines["right"].axis.axes.tick_params(direction="out", width=2)
+    ax.spines["top"].axis.axes.tick_params(direction="out", width=2)
 

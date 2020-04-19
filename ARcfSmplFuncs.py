@@ -79,7 +79,7 @@ def initF(nR, nCS, nCN, cohrtSlow=False):
     return iRs
 """
 
-def initF(nR, nCS, nCN, ifs=None):
+def initF(nR, nCS, nCN, ifs=None, ir=0.97):
     #  random AR coeff set.  nR real roots and nCPr cmplx pairs
     nCPr = nCS + nCN
 
@@ -100,12 +100,13 @@ def initF(nR, nCS, nCN, ifs=None):
 
     for n in xrange(nCPr):
         if n < nCS:
-            print ifs[n]
             th = ifs[n]
-            r  = 0.97
+            r  = ir
         else:  #  Looking at how noise roots distribute themselves
                #  they seem to spread out fairly evenly in spectrum
-            th = _N.pi*(0.15 + 0.8 / (nCN - (n - nCS)))   #  above 80Hz, weak
+            #th = _N.pi*(0.15 + 0.8 / (nCN - (n - nCS)))   #  above 80Hz, weak
+            th = _N.pi*(0.01 + 0.01 / (nCN - (n - nCS)))   #  above 80Hz, weak
+            print(th)
             r  = (1 + _N.random.rand()) / (2 * _N.sqrt(nCN))   #  r ~ (1 / (2*nCN))
             #r  = 1.5 / (2 * _N.sqrt(nCN))   #  r ~ (1 / (2*nCN))
             #r  = 0.5+0.3*_N.random.rand()
@@ -205,7 +206,7 @@ def dcmpcff(alfa):
             if j != m:
                 AA[m, m] *= 1 - alfa[j]/alfa[m]
         bbc[m] = 1 / AA[m, m]
-
+    
     b   = None
     c   = None
 
@@ -261,3 +262,4 @@ def buildLims(Cn, freq_lims, nzLimL=90.):
         radians[Ns+ns, 0] = p1a; radians[Ns+ns, 1] = p1b
 
     return radians
+

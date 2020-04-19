@@ -14,6 +14,7 @@ import ARlib as _arl
 import kfARlibMPmv_ram2 as _kfar
 import pyPG as lw
 from ARcfSmplNoMCMC import ARcfSmpl
+#from ARcfSmpl2 import ARcfSmpl
 
 import commdefs as _cd
 
@@ -194,6 +195,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
         iterBLOCKS  = oo.ITERS/oo.peek
         smpx_tmp = _N.empty((oo.TR, oo.N+1, oo.k))
+        
+        ######  Gibbs sampling procedure
         for itrB in xrange(iterBLOCKS):
             for it in xrange(itrB*oo.peek, (itrB+1)*oo.peek):
                 ttt1 = _tm.time()
@@ -258,9 +261,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                 #  cov matrix, prior of aS 
 
-                oo.gau_obs = kpOws - BaS - ARo - oous_rs - oo.knownSig
-
-                oo.gau_var =1 / oo.ws   #  time dependent noise
+                # oo.gau_obs = kpOws - BaS - ARo - oous_rs - oo.knownSig
+                # oo.gau_var =1 / oo.ws   #  time dependent noise
 
                 if oo.bpsth:
                     Oms  = kpOws - oo.smpx[..., 2:, 0] - ARo - oous_rs - oo.knownSig
@@ -343,6 +345,10 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 if not oo.noAR:
                 #  _d.F, _d.N, _d.ks, 
                     #_kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, oo.smpx, K)
+
+                    oo.gau_obs = kpOws - BaS - ARo - oous_rs - oo.knownSig
+                    oo.gau_var =1 / oo.ws   #  time dependent noise
+                    
                     _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, smpx_tmp, K)
 
                     oo.smpx[:, 2:]           = smpx_tmp
@@ -357,7 +363,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                     ttt6 = _tm.time()
                     if not oo.bFixF:   
-                        ARcfSmpl(oo.lfc, ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=50, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)  
+                        #ARcfSmpl(oo.lfc, ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
+                        ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)  
                         oo.F_alfa_rep = alpR + alpC   #  new constructed
                         prt, rank, f, amp = ampAngRep(oo.F_alfa_rep, f_order=True)
                         #print prt
@@ -389,10 +396,10 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                             oo.x00[m]      = oo.smpx[m, 2]*0.1
                             oo.smp_q2[m, it]= oo.q2[m]
                     else:
-                        #oo.a2 = oo.a_q2 + 0.5*(ooTR*ooN + 2)  #  N + 1 - 1
-                        oo.a2 = 0.5*(ooTR*(ooN-oo.ignr) + 2)  #  N + 1 - 1
-                        #BB2 = oo.B_q2
-                        BB2 = 0
+                        oo.a2 = oo.a_q2 + 0.5*(ooTR*ooN + 2)  #  N + 1 - 1
+                        #oo.a2 = 0.5*(ooTR*(ooN-oo.ignr) + 2)  #  N + 1 - 1
+                        BB2 = oo.B_q2
+                        #BB2 = 0
                         for m in xrange(ooTR):
                             #   set x00 
                             oo.x00[m]      = oo.smpx[m, 2]*0.1
@@ -401,21 +408,23 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                             rsd_stp = oo.smpx[m, 3+oo.ignr:,0] - _N.dot(oo.smpx[m, 2+oo.ignr:-1], oo.F0).T
                             #oo.rsds[it, m] = _N.dot(rsd_stp, rsd_stp.T)
                             BB2 += 0.5 * _N.dot(rsd_stp, rsd_stp.T)
+                        
+                        
                         oo.q2[:] = _ss.invgamma.rvs(oo.a2, scale=BB2)
-
+                    print("%(a).3f    %(B).3f     %(q2).2e" % {"a" : oo.a2, "B" : BB2, "q2" : oo.q2[0]})
                     oo.smp_q2[:, it]= oo.q2
 
                 ttt7 = _tm.time()
 
-    #             print ("t2-t1  %.4f" % (t2-t1))
-    #             print ("t3-t2  %.4f" % (t3-t2))
-    #             print ("t4-t3  %.4f" % (t4-t3))
+    #             print ("t2-t1  %.4f" % (ttt2-ttt1))
+    #             print ("t3-t2  %.4f" % (ttt3-ttt2))
+    #             print ("t4-t3  %.4f" % (ttt4-ttt3))
     # #            print ("t4b-t4a  %.4f" % (t4b-t4a))
     # #            print ("t4c-t4b  %.4f" % (t4c-t4b))
     # #            print ("t4-t4c  %.4f" % (t4-t4c))
-    #             print ("t5-t4  %.4f" % (t5-t4))
-    #             print ("t6-t5  %.4f" % (t6-t5))
-    #             print ("t7-t6  %.4f" % (t7-t6))
+    #             print ("t5-t4  %.4f" % (ttt5-ttt4))
+    #             print ("t6-t5  %.4f" % (ttt6-ttt5))
+    #             print ("t7-t6  %.4f" % (ttt7-ttt6))
 
 
             if it > oo.minITERS:
@@ -424,32 +433,32 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 smps[1, :it+1] = oo.fs[:it+1, 0]
                 smps[2, :it+1] = oo.mnStds[:it+1]
 
-                frms = _mg.stationary_from_Z_bckwd(smps, blksz=oo.peek)
+                #frms = _mg.stationary_from_Z_bckwd(smps, blksz=oo.peek)
+
 
                 fig = _plt.figure(figsize=(8, 8))
                 fig.add_subplot(3, 1, 1)
                 _plt.plot(range(1, it), oo.amps[1:it, 0], color="grey", lw=1.5)
-                _plt.plot(range(frms, it), oo.amps[frms:it, 0], color="black", lw=3)
+                _plt.plot(range(0, it), oo.amps[0:it, 0], color="black", lw=3)
                 _plt.ylabel("amp")
                 fig.add_subplot(3, 1, 2)
                 _plt.plot(range(1, it), oo.fs[1:it, 0]/(2*oo.dt), color="grey", lw=1.5)
-                _plt.plot(range(frms, it), oo.fs[frms:it, 0]/(2*oo.dt), color="black", lw=3)
+                _plt.plot(range(0, it), oo.fs[0:it, 0]/(2*oo.dt), color="black", lw=3)
                 _plt.ylabel("f")
                 fig.add_subplot(3, 1, 3)
                 _plt.plot(range(1, it), oo.mnStds[1:it], color="grey", lw=1.5)
-                _plt.plot(range(frms, it), oo.mnStds[frms:it], color="black", lw=3)
+                _plt.plot(range(0, it), oo.mnStds[0:it], color="black", lw=3)
                 _plt.ylabel("amp")
                 _plt.xlabel("iter")
                 _plt.savefig("%(dir)stmp-fsamps%(it)d" % {"dir" : oo.mcmcRunDir, "it" : it+1})
                 fig.subplots_adjust(left=0.15, bottom=0.15, right=0.95, top=0.95)
                 _plt.close()
 
-                if it - frms > oo.stationaryDuration:
-                    break
+                #if it - frms > oo.stationaryDuration:
+                #    break
 
-
-        oo.dump_smps(frms, toiter=(it+1), dir=oo.mcmcRunDir)
-        oo.VIS = ARo
+                oo.dump_smps(0, toiter=(it+1), dir=oo.mcmcRunDir)
+        oo.VIS = ARo   #  to examine this from outside
 
 
     def dump(self, dir=None):
@@ -547,4 +556,5 @@ class mcmcARp(mcmcARspk.mcmcARspk):
             oo.gibbsSamp()
             t2    = _tm.time()
             print (t2-t1)
+            print "done"
 

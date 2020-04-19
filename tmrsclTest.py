@@ -29,6 +29,7 @@ def timeRescaleTest(fr, spks01, dt, TR, m, nohist=False, loP=0.00001):
         T  = fr.shape[1]
 
     zs = []
+    rts= []
     Nm1 = 0
 
     for tr in xrange(TR):
@@ -46,6 +47,7 @@ def timeRescaleTest(fr, spks01, dt, TR, m, nohist=False, loP=0.00001):
         zs.extend((1 - _N.exp(-taus)).tolist())
         if N > 0:   #  this trial has spikes
             Nm1 += N - 1
+        rts.append(rt)
 
     zss  = _N.sort(_N.array(zs))
     ks  = _N.arange(1, Nm1 + 1)
@@ -53,7 +55,7 @@ def timeRescaleTest(fr, spks01, dt, TR, m, nohist=False, loP=0.00001):
     bsp = bs + 1.36 / _N.sqrt(Nm1)
     bsn = bs - 1.36 / _N.sqrt(Nm1)
     x   = _N.linspace(1./Nm1, 1, Nm1)
-    return x, zss, bs, bsp, bsn
+    return x, zss, bs, bsp, bsn, rts
 
 def zoom(fr, spkts, m, nohist=False, loP=0.0001):
     """

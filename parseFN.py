@@ -4,15 +4,18 @@ import numpy as _N
 
 def parseFN(baseFN):
     """
-    (np)/(wp)_tr0-tr1_Cn_R
+    (np)/(wp)_tr0-tr1_Cn_R[-lbl]   lbl can be ie '142' or 'A4e'
     """
     FN         = baseFN.split("/")[-1]
 
     #p          = re.compile("([a-zA-Z]+)_(\d+)-(\d+)_(\d+)_(\d+)")
-    p          = re.compile("(\w+)_(\d+)-(\d+)_(\d+)_(\d+)")
+    p          = re.compile("(\w+)_(\d+)-(\d+)_(\d+)_(\d+)-{0,1}([\d\w]{0,})")
     m = p.match(FN)
-    
-    return m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5))
+
+    if m.group(6) != "":
+        return m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5)), m.group(6)
+    else:   #  old behavior
+        return m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5))
 
 
 def parseFNcnt(baseFN):

@@ -12,7 +12,7 @@ from ARcfSmplFuncs import ampAngRep, dcmpcff, betterProposal
 import matplotlib.pyplot as _plt
 
 
-def ARcfSmpl(lfc, N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts=1, prior=_cd.__COMP_REF__, aro=_cd.__NF__, sig_ph0L=-1, sig_ph0H=0):
+def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts=1, prior=_cd.__COMP_REF__, aro=_cd.__NF__, sig_ph0L=-1, sig_ph0H=0):
     C = Cs + Cn
 
     #  I return F and Eigvals
@@ -59,9 +59,9 @@ def ARcfSmpl(lfc, N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, ac
         arInd = range(C-1, -1, -1)
 
     for c in arInd:   #  Filtering signal root first drastically alters the strength of the signal root upon update sometimes.  
-        rprior = prior
-        if c >= Cs:
-           rprior = _cd.__COMP_REF__
+        # rprior = prior
+        # if c >= Cs:
+        #    rprior = _cd.__COMP_REF__
         if c >= Cs:
             ph0L = -1
             ph0H = 0
@@ -126,8 +126,6 @@ def ARcfSmpl(lfc, N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, ac
 
         ##########  Sample *PROPOSED* parameters 
 
-        bSimpOK = False
-
         # #  If posterior valid Gaussian    q2 x H - oNZ * prH00
 
         ###  This case is still fairly inexpensive.  
@@ -164,13 +162,6 @@ def ARcfSmpl(lfc, N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, ac
         alpC.insert(j-1, (A[0] - img)*0.5)     #alpC.insert(j - 1, jth_r1)
         alpC.insert(j-1, (A[0] + img)*0.5)     #alpC.insert(j - 1, jth_r2)
         
-        #a = [1, 2, 3, 4, 5, 6]
-        #  j = 3
-        # r1 = a.pop(j)
-        # r2 = a.pop(j-1)
-        # a.insert(j-1, r1)
-        # a.insert(j-1, r2)
-
 
     Ff  = _N.zeros((1, k))
     ######     REAL ROOTS.  Directly sample the conditional posterior
@@ -279,3 +270,27 @@ def FilteredTimeseries(N, k, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR):
     return ujs, wjs#, lsmpld
 
 
+def timeseries_decompose(R, C, allalfas, TR, it, N, ignr, rt, zt, uts, wts):
+    """
+    uts, wts   filtered time series
+    rt, zt     decomposed, additive components
+    """
+    for tr in xrange(TR):
+        b, c = dcmpcff(alfa=allalfas[it])
+        #print("---------------")
+        #print b
+        #print c
+
+        for r in xrange(R):
+            rt[it, tr, :, r] = b[r] * uts[tr, r, :, 0]
+
+        for z in xrange(C):
+            #print("%dth comp" % z)
+            cf1 = 2*c[2*z].real
+            gam = allalfas[it, R+2*z]
+            #print(gam)
+            cf2 = 2*(c[2*z].real*gam.real + c[2*z].imag*gam.imag)
+            #print("%(1).3f  %(2).3f" % {"1" : cf1, "2" : cf2})
+            zt[it, tr, 0:N-ignr-2, z] = \
+                cf1*wts[tr, z, 1:N-ignr-1, 0] - \
+                cf2*wts[tr, z, 0:N-ignr-2, 0]

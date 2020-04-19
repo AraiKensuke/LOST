@@ -62,7 +62,7 @@ def hpFilt(fp, fs, nyqf, y, disp=False):
 def gauKer(w):
     wf = _N.empty(8*w+1)
 
-    for i in xrange(-4*w, 4*w+1):
+    for i in range(-4*w, 4*w+1):
         wf[i+4*w] = _N.exp(-0.5*(i*i)/(w*w))
 
     return wf

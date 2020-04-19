@@ -51,8 +51,6 @@ def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, 
     cdef double* p_px        = &px[0, 0, 0]
     cdef double* p_pV        = &pV[0, 0, 0, 0]
     cdef double* p_K        = &K[0, 0, 0]
-    cdef long* p_Ns        = &Ns[0]
-    cdef long* p_ks        = &ks[0]
     cdef double[:, :, ::1] smpx_mv = smpx
     cdef double* p_smpx            = &smpx_mv[0, 0, 0]
 

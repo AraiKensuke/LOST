@@ -90,8 +90,8 @@ def ARcfSmpl(lfc, N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, ac
 
         for m in xrange(TR):
             _N.dot(smpxW[m], Ff.T, out=wjs[m, c])
-            fig = _plt.figure()
-            _plt.plot(wjs[m, c, 1000:1500])
+            #fig = _plt.figure()
+            #_plt.plot(wjs[m, c, 1000:1500])
 
             ####   Needed for proposal density calculation
             #Ys[:, 0]    = wj[2:N, 0]

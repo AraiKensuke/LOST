@@ -246,7 +246,7 @@ def createDataPP(N, B, beta, u, stNz, p=1, trim=0, x=None, absrefr=0):
     #  B[1] =  0.9
     if type(u) != _N.ndarray:
         u = _N.ones(N) * u
-    if x == None:
+    if x is None:
         k = len(B)
         stNz = _N.sqrt(stNz)
 
@@ -304,7 +304,7 @@ def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offs
         xc   = _N.zeros((nRhythms, N+buf))   #  components
         x = _N.zeros(N+buf)
     else:
-        if x == None:
+        if x is None:
             xc   = _N.empty((nRhythms, N+buf))   #  components
             for nr in xrange(nRhythms):
                 k = len(B[nr])

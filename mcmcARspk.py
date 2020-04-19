@@ -4,7 +4,7 @@ from filter import bpFilt, lpFilt, gauKer
 import mcmcAR as mAR
 import ARlib as _arl
 import pyPG as lw
-import logerfc as _lfc
+#import logerfc as _lfc
 import commdefs as _cd
 import os
 import numpy as _N
@@ -51,7 +51,7 @@ class mcmcARspk(mAR.mcmcAR):
     histknots     = 10     #  histknots == 9 if p(isi) == max at isi = 1
     #histknots     = 11
     #  LFC
-    lfc           = None
+    #lfc           = None
 
     ####  TEMPORARY
     Bi            = None
@@ -107,9 +107,9 @@ class mcmcARspk(mAR.mcmcAR):
 
     t0_is_t_since_1st_spk = None    #  o set up spike history, generate a virtual spike before 1st spike in each trial
 
-    def __init__(self):
-        if (self.noAR is not None) or (self.noAR == False):
-            self.lfc         = _lfc.logerfc()
+    #def __init__(self):
+        # if (self.noAR is not None) or (self.noAR == False):
+        #     self.lfc         = _lfc.logerfc()
 
     def loadDat(self, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None): #################  loadDat
         oo = self
@@ -521,7 +521,7 @@ class mcmcARspk(mAR.mcmcAR):
         oo.smpx  = None
         oo.wts   = None
         oo.uts   = None
-        oo.lfc   = None
+        #oo.lfc   = None
         oo.rts   = None
         oo.zts   = None
 

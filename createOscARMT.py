@@ -32,7 +32,7 @@ dSA        = 5;     dSF        = 5;
 
 def create(setname):
     # _plt.ioff()
-    copyfile("%s.py" % setname, "%(s)s/%(s)s.py" % {"s" : setname, "to" : setFN("%s.py" % setname, dir=setname, create=True)})
+    copyfile("%s.py" % setname, "%(s)s/%(s)s.py" % {"s" : setname, "to" : setFN("%s.py" % setname, dirn=setname, create=True)})
     global dt, lambda2, rpsth, isis, us, csTR, etme, bGenOscUsingAR, f0VAR, f0, Bf, Ba, amp, amp_nz, dSA, dSF, psth
     if bGenOscUsingAR:
         ARcoeff = _N.empty((nRhythms, 2))
