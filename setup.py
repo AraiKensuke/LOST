@@ -8,8 +8,8 @@ from distutils.extension import Extension
 from Cython.Distutils import build_ext   # Extension for a c-file, build_ext for cython file
 
 #modules = ["hc_bcast", "par_intgrls_f", "par_intgrls_q2", "fastnum"]
-#modules = ["kfARlibMPmv_ram2", "kfcomMPmv_ram"]
-modules = ["kfARlib1c"]
+modules = ["kfARlibMPmv_ram2", "kfcomMPmv_ram"]
+#modules = ["kfARlib1c"]
 
 ###  import LogitWrapper 
 ###  LogitWrapper
@@ -24,9 +24,10 @@ modules = ["kfARlib1c"]
 #  to specify compiler, maybe set CC environment variable
 #  or python setup.py build --compiler=g++
 incdir = [get_python_inc(plat_specific=1), numpy.get_include(), "pyPG/include/RNG"]
-libdir = ['/usr/local/lib/gcc/8', '/usr/local/lib']
-os.environ["CC"]  = "gcc-8"
-os.environ["CXX"] = "gcc-8"
+#libdir = ['/usr/local/lib/gcc/8', '/usr/local/lib']
+libdir = ['/usr/local/lib']
+os.environ["CC"]  = "gcc"
+os.environ["CXX"] = "gcc"
 
 ##  Handle OPENMP switch here
 
