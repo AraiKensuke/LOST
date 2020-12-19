@@ -76,7 +76,7 @@ def loadDat(setname, model, t0=0, t1=None, filtered=False, phase=False):  ######
         
     #  remove trials where data has no information
     rmTrl = []
-    print TR
+    print(TR)
     kpTrl = range(TR)
     if model == "binomial":
         kp  = y - n*0.5
@@ -97,7 +97,7 @@ def loadDat(setname, model, t0=0, t1=None, filtered=False, phase=False):  ######
             ysm = _N.sum(y, axis=1)
             for tr in xrange(TR-1, -1, -1):
                 if ysm[tr] == 0:
-                    print "!!!!!!!!!!!!!!     trial w/ 0 spks!!!!!!!"
+                    print("!!!!!!!!!!!!!!     trial w/ 0 spks!!!!!!!")
                     rmTrl.append(tr)
                     kpTrl.pop(tr)
                     ysm[tr] = 10  #  this trial will be removed anyway
@@ -162,18 +162,18 @@ def loadL2(setname, fn=None):
     if fn is not None:
         fn = resFN(fn, dir=setname)
         if os.access(fn, os.F_OK):
-            print "***  loaded spike history file \"%s\" ***" % fn
+            print("***  loaded spike history file \"%s\" ***" % fn)
             spkhist = _N.loadtxt(fn)
-            print spkhist[0:50]
+            print(spkhist[0:50])
             loghist = _N.log(spkhist)
-            print loghist[0:50]
-            print "-----------------"
+            print(loghist[0:50])
+            print("-----------------")
             tooneg = _N.where(loghist < -6)[0]
             loghist[tooneg] = -6
             return loghist
-        print "!!!  NO history file loaded !!!"
+        print("!!!  NO history file loaded !!!")
         if fn is not None:
-            print "!!!  Couldn't find short-term history \"%s\" !!!" % fn
+            print("!!!  Couldn't find short-term history \"%s\" !!!" % fn)
         
     return None
 
@@ -190,14 +190,14 @@ def runNotes(setname, ID_q2, TR0, TR1):
 def loadKnown(setname, trials=None, fn="known.dat"):
     fn = resFN(fn, dir=setname)
     if os.access(fn, os.F_OK):
-        print "***  loaded known signal \"%s\" ***" % fn
+        print("***  loaded known signal \"%s\" ***" % fn)
         a = _N.loadtxt(fn)
         if trials is None:
             return a.T
         else:
             return a.T[trials]
-    print "!!!  NO known signal loaded !!!"
+    print("!!!  NO known signal loaded !!!")
     if fn is not None:
-        print "!!!  Couldn't find \"%s\" !!!" % fn
+        print("!!!  Couldn't find \"%s\" !!!" % fn)
         
     return None

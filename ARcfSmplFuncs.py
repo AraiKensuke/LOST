@@ -1,4 +1,4 @@
-import utilities as _U
+#import utilities as _U
 import numpy as _N
 import scipy.stats as _ss
 
@@ -219,27 +219,28 @@ def dcmpcff(alfa):
 
     return b, c
 
-def betterProposal(J, Ji, U):
-    """
-    Move the proposal nearer to 
-    """
-    a          = 0.25*Ji[1, 1]
-    b          = -1.5*Ji[0, 1]
-    c          = 2*Ji[0, 0] + U[0, 0]*Ji[0, 1] + U[1, 0]*Ji[1, 1]
-    d          = -2 * (U[0, 0]*Ji[0, 0] + U[1, 0]*Ji[0, 1])
-    if a != 0:
-        roots      = _U.cubicRoots(a, b, c, d)
-    else:
-        roots      = [(-c + _N.sqrt(c*c - 4*b*d)) / (2*b), \
-                      (-c - _N.sqrt(c*c - 4*b*d)) / (2*b)]
 
-    rM1  = None
-    for r in roots:
-        if (r.imag == 0) and (r >= -2) and (r <= 2):
-            rM1 = r
-    rM2  = -0.25*rM1*rM1
+# def betterProposal(J, Ji, U):
+#     """
+#     Move the proposal nearer to 
+#     """
+#     a          = 0.25*Ji[1, 1]
+#     b          = -1.5*Ji[0, 1]
+#     c          = 2*Ji[0, 0] + U[0, 0]*Ji[0, 1] + U[1, 0]*Ji[1, 1]
+#     d          = -2 * (U[0, 0]*Ji[0, 0] + U[1, 0]*Ji[0, 1])
+#     if a != 0:
+#         roots      = _U.cubicRoots(a, b, c, d)
+#     else:
+#         roots      = [(-c + _N.sqrt(c*c - 4*b*d)) / (2*b), \
+#                       (-c - _N.sqrt(c*c - 4*b*d)) / (2*b)]
 
-    return rM1, rM2
+#     rM1  = None
+#     for r in roots:
+#         if (r.imag == 0) and (r >= -2) and (r <= 2):
+#             rM1 = r
+#     rM2  = -0.25*rM1*rM1
+
+#     return rM1, rM2
 
 def buildLims(Cn, freq_lims, nzLimL=90.):
     Ns   = len(freq_lims)   #  # of signal components

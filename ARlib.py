@@ -29,7 +29,7 @@ def roots2ARcoeff(rs):
     B  = _N.empty((k, 1),  dtype=rs.dtype)
     F  = _N.empty((k, 1),  dtype=rs.dtype)
 
-    for c in xrange(k-1):     #  columns
+    for c in range(k-1):     #  columns
         A[:, c] = rs**(k-c-1)
     A[:, k-1] = 1
     B[:, 0] = rs**k
@@ -37,7 +37,7 @@ def roots2ARcoeff(rs):
     try:
         F = _N.linalg.solve(A, B)
     except _N.linalg.linalg.LinAlgError:
-        print A, B
+        print(A, B)
         F = _N.zeros((k, 1))
     return F.T.real
 
@@ -89,14 +89,14 @@ def generateValidAR(k):
     B  = _N.empty((k, 1),  dtype=dtyp)
     F  = _N.empty((k, 1),  dtype=dtyp)
 
-    for n in xrange(nImg/2):
+    for n in range(nImg/2):
         ph        = phzs[n]
         rs[2*n]   = amps[n] * (_N.cos(ph) + 1j * _N.sin(ph))
         rs[2*n+1] = rs[2*n].real - 1j*rs[2*n].imag 
-    for n in xrange(nReal):
+    for n in range(nReal):
         rs[nImg + n]   = amps[nImg/2 + n]
 
-    for c in xrange(k-1):
+    for c in range(k-1):
         A[:, c] = rs**(k-c-1)
     A[:, k-1] = 1
     B[:, 0] = rs**k
@@ -118,7 +118,7 @@ def cmplxRoots_old(arC):
     vroots = _N.empty(N)
 
     #  stable when roots (eigenvalues) are within unit circle
-    for roots in xrange(N):
+    for roots in range(N):
         zR = 1 / vals[roots]
         vroots[roots] = (zR * zR.conj()).real
         if vroots[roots] < 1:
@@ -146,7 +146,7 @@ def ARevals(arC):
     mags     = _N.empty(N)
 
     #  stable when roots (eigenvalues) are within unit circle
-    for ev in xrange(N):
+    for ev in range(N):
         mags[ev] = _N.sqrt((vals[ev] * vals[ev].conj()).real)
         if mags[ev] > 1:    #  Opposite of Mike West
             bBdd = False
@@ -175,7 +175,7 @@ def ARroots(arC):
     roots = _N.polynomial.polynomial.polyroots(arr)
     mag     = _N.empty(N)
     #  stable when roots (eigenvalues) are within unit circle
-    for r in xrange(N):
+    for r in range(N):
         mag[r] = _N.sqrt((roots[r] * roots[r].conj()).real)
         if mag[r] < 1:
             bBdd = False
@@ -212,8 +212,8 @@ def dcyCovMat(N, diagMags, corr):
     """
     covM = _N.empty((N, N))
     _N.fill_diagonal(covM, diagMags)
-    for l in xrange(1, N):
-        for n in xrange(N - l):
+    for l in range(1, N):
+        for n in range(N - l):
             covM[n, n+l] = (0.5*(diagMags[n]+diagMags[n+l]))*corr**l
             covM[n+l, n] = covM[n, n+l]
 
@@ -281,7 +281,7 @@ def MetrSampF(N, k, smpx, q2, pr_uF, pr_cvF, trCv, burn=100, Fini=None):
 
         if bBdd and (evals.dtype==_N.complex):   # quick hack
             bLoFreq = False
-            for i in xrange(k):
+            for i in range(k):
                 azm = azim(evals[i].real, evals[i].imag)
                 if (azm < 0.4):# and (azm < _N.pi):
                     bLoFreq = True
@@ -338,7 +338,7 @@ def MetrSampF_egv(N, k, smpx, q2, sae, burn=100, Fini=None):
 
     rands = _N.random.rand(burn)
 
-    for n in xrange(burn):
+    for n in range(burn):
 #        Fn  = generateValidAR(k)
         Fn  = sae.draw()
         FnM  = Fn - M
@@ -351,7 +351,7 @@ def MetrSampF_egv(N, k, smpx, q2, sae, burn=100, Fini=None):
 
 #     lrands = _N.log(_N.random.rand(burn))
 
-#     for n in xrange(burn):
+#     for n in range(burn):
 #         Fn  = generateValidAR(k)
 #         FnM  = Fn - M
 

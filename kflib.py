@@ -1,6 +1,6 @@
 from LOSTdirs import resFN
 import numpy as _N
-from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff, betterProposal
+from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff#betterProposal
 import matplotlib.pyplot as _plt
 from LOST.filter import gauKer
 import scipy.stats as _ss

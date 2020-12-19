@@ -1,13 +1,13 @@
 import numpy.polynomial.polynomial as _Npp
 import scipy.stats as _ss
-import kdist as _kd
-import ARlib as _arl
+import LOST.kdist as _kd
+import LOST.ARlib as _arl
 import warnings
 #import logerfc as _lfc
-import commdefs as _cd
+import LOST.commdefs as _cd
 import numpy as _N
 #from ARcfSmplFuncs import ampAngRep, randomF, dcmpcff, betterProposal
-from ARcfSmplFuncs import ampAngRep, dcmpcff, betterProposal
+from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff
 #import ARcfSmplFuncsCy as ac
 import matplotlib.pyplot as _plt
 
