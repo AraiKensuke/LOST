@@ -1,8 +1,8 @@
 import numpy as _N
 import patsy
-import utilities as _U
+import LOST.utilities as _U
 import matplotlib.pyplot as _plt
-from utildirs import setFN
+from LOST.utildirs import setFN
 
 v = 5
 c = 5
