@@ -7,9 +7,7 @@ from distutils.extension import Extension
 #from Cython.Build import cythonize      # cythonize compiles a pyx
 from Cython.Distutils import build_ext   # Extension for a c-file, build_ext for cython file
 
-#modules = ["hc_bcast", "par_intgrls_f", "par_intgrls_q2", "fastnum"]
-#modules = ["kfARlibMPmv_ram2", "kfcomMPmv_ram"]
-modules = ["kfARlib1c"]
+modules = ["kfARlibMPmv_ram2", "kfcomMPmv_ram", "kfARlib1c"]
 
 ###  import LogitWrapper 
 ###  LogitWrapper
