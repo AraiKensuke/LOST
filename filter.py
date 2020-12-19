@@ -1,8 +1,8 @@
 import numpy as _N
 import scipy.signal as _ssig
-from scipy.signal import convolve, remez, freqz, freqs, filter_design, lfilter
+from scipy.signal import convolve, remez, freqz, freqs, filter_design, lfilter, filtfilt
 from scipy.signal.filter_design import butter, zpk2tf, bessel, cheby1, cheb1ord
-from filtfilt import filtfilt
+#from filtfilt import filtfilt
 import matplotlib.pyplot as _plt
 
 def base_q4atan(x, y):
