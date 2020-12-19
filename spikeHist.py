@@ -24,10 +24,10 @@ class spikeHist:
 
         N, TR = oo.dat.shape
         if oo.t1 - oo.t0 > N:
-            print "ERROR  t1-t0 > N"
+            print("ERROR  t1-t0 > N")
             return
         if oo.endTR - oo.startTR > TR:
-            print "ERROR  endTR-startTR > TR"
+            print("ERROR  endTR-startTR > TR")
             return
 
         st = oo.dat[oo.t0:oo.t1, oo.COLS*oo.startTR+2:oo.COLS*oo.endTR+2:oo.COLS]
@@ -43,8 +43,8 @@ class spikeHist:
         X[:, :, 0] = 1  #  offset
         y  = _N.empty((TR, Ldf))
 
-        for tr in xrange(TR):
-            for t in xrange(oo.LHbin*(oo.nLHBins+1), N):
+        for tr in range(TR):
+            for t in range(oo.LHbin*(oo.nLHBins+1), N):
                 #  0:9
                 hist = st[t-oo.LHbin*(oo.nLHBins+1):t, tr][::-1]
 
@@ -86,10 +86,10 @@ class spikeHist:
 
         N, TR = oo.dat.shape
         if oo.t1 - oo.t0 > N:
-            print "ERROR  t1-t0 > N"
+            print("ERROR  t1-t0 > N")
             return
         if oo.endTR - oo.startTR > TR:
-            print "ERROR  endTR-startTR > TR"
+            print("ERROR  endTR-startTR > TR")
             return
 
         #  spikes
@@ -105,9 +105,9 @@ class spikeHist:
         X  = _N.zeros((TR, Ldf, oo.LHbin + oo.nLHBins + TR))
         y  = _N.empty((TR, Ldf))
 
-        for tr in xrange(TR):
+        for tr in range(TR):
             X[tr, :, tr] = 1  #  offset
-            for t in xrange(oo.LHbin*(oo.nLHBins+1), N):
+            for t in range(oo.LHbin*(oo.nLHBins+1), N):
                 #  0:9
                 hist = st[t-oo.LHbin*(oo.nLHBins+1):t, tr][::-1]
 

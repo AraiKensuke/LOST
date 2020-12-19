@@ -9,7 +9,6 @@ from kassdirs import resFN, datFN
 
 from   mcmcARpPlot import plotFigs, plotARcomps, plotQ2
 from mcmcARpFuncs import loadL2, runNotes
-import kfardat as _kfardat
 
 import utilities as _U
 

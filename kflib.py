@@ -1,8 +1,8 @@
 from LOSTdirs import resFN
 import numpy as _N
-from ARcfSmplFuncs import ampAngRep, dcmpcff, betterProposal
+from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff, betterProposal
 import matplotlib.pyplot as _plt
-from filter import gauKer
+from LOST.filter import gauKer
 import scipy.stats as _ss
 
 def createFlucOsc(f0, f0VAR, N, dt0, TR, Bf=[0.99], Ba=[0.99], amp=1, amp_nz=0, stdf=None, stda=None, sig=0.1, smoothKer=0, dSF=5, dSA=5):
@@ -28,7 +28,7 @@ def createFlucOsc(f0, f0VAR, N, dt0, TR, Bf=[0.99], Ba=[0.99], amp=1, amp_nz=0, 
 
     if smoothKer > 0:
         gk = gauKer(smoothKer)
-    for tr in xrange(TR):
+    for tr in range(TR):
         ph0 = _N.random.rand() * 2*_N.pi
         bGood = False
         while not bGood:
@@ -38,12 +38,12 @@ def createFlucOsc(f0, f0VAR, N, dt0, TR, Bf=[0.99], Ba=[0.99], amp=1, amp_nz=0, 
 
             bGood = True
             lt0s = _N.where(fn < 0)
-            print "fn < 0 at %d places" % len(lt0s[0])
+            print("fn < 0 at %d places" % len(lt0s[0]))
 
             #if _N.min(fn) > 0:
             #    bGood = True
 
-        for i in xrange(1, N):
+        for i in range(1, N):
             dt = dt0 * fn[i]
             t[i] = t[i-1] + dt
             dts[i-1] = dt
@@ -59,7 +59,7 @@ def createFlucOsc(f0, f0VAR, N, dt0, TR, Bf=[0.99], Ba=[0.99], amp=1, amp_nz=0, 
             AM   = 1 + an  #  if we get fluctuations 2 stds bigger, 
             bGood = True
             lt0s = _N.where(AM < 0)
-            print "AM < 0 at %d places" % len(lt0s[0])
+            print("AM < 0 at %d places" % len(lt0s[0]))
             #if _N.min(AM) > 0:
             #    bGood = True
 
@@ -92,7 +92,7 @@ def createOscPacket(f0, f0VAR, N, dt0, TR, tM0, tS0, tJ=0, Bf=[0.99], amp=1, std
 
     AM = _N.empty(N)
 
-    for tr in xrange(TR):
+    for tr in range(TR):
         ph0 = _N.random.rand() * 2*_N.pi
 
         tM = tM0 + int(tJ*_N.random.randn())
@@ -106,7 +106,7 @@ def createOscPacket(f0, f0VAR, N, dt0, TR, tM0, tS0, tJ=0, Bf=[0.99], amp=1, std
             if _N.min(fn) > 0:
                 bGood = True
 
-        for i in xrange(1, N):
+        for i in range(1, N):
             dt = dt0 * fn[i]
             t[i] = t[i-1] + dt
             dts[i-1] = dt
@@ -139,7 +139,7 @@ def createModEnvelopes(TR, N, t0, t1, jitterTiming, jitterLength, gkW=0, weak=0.
 
     AM = _N.empty(N)
 
-    for tr in xrange(TR):
+    for tr in range(TR):
         w    = int(((t1-t0) + jitterLength * _N.random.randn())/2.)
         m    = int(0.5*(t1+t0) + jitterTiming * _N.random.randn())
 
@@ -171,7 +171,7 @@ def createUpDn(TR, N, minDurL, lmdL, minDurH, lmdH, lowV=-1, upM=1, pUp=0.5):
     fltrdH     = rvH[rvH > minDurH]
     ir = 0   #  random exponential
     vals  = _N.array([0, lowV])
-    for tr in xrange(TR):
+    for tr in range(TR):
         iS = 0 if (_N.random.rand() < 0.5) else 1
         t = 0
 
@@ -200,11 +200,11 @@ def createDataAR(N, B, err, obsnz, trim=0):
     y    = _N.empty(N)
 
     #  initial few
-    for i in xrange(p+1):
+    for i in range(p+1):
         x[i] = err*_N.random.randn()
         y[i] = obsnz*_N.random.randn()
 
-    for i in xrange(p+1, N):
+    for i in range(p+1, N):
         x[i] = _N.dot(B, x[i-1:i-p-1:-1]) + err*_N.random.randn()
         #  y = Hx + w   where w is a zero-mean Gaussian with cov. matrix R.
         #  In our case, H is 1 and R is 1x1
@@ -225,12 +225,12 @@ def createDataAR(N, B, err, obsnz, trim=0):
     y    = _N.empty(N)
 
     #  initial few
-    for i in xrange(p+1):
+    for i in range(p+1):
         x[i] = err*_N.random.randn()
         y[i] = obsnz*_N.random.randn()
 
     nzs = err*_N.random.randn(N)
-    for i in xrange(p+1, N):
+    for i in range(p+1, N):
         #x[i] = _N.dot(B, x[i-1:i-p-1:-1]) + nzs[i]
         x[i] = _N.dot(BB, x[i-p:i]) + nzs[i]
         #  y = Hx + w   where w is a zero-mean Gaussian with cov. matrix R.
@@ -252,9 +252,9 @@ def createDataPP(N, B, beta, u, stNz, p=1, trim=0, x=None, absrefr=0):
 
         rands = _N.random.randn(N)
         x    = _N.empty(N)
-        for i in xrange(k+1):
+        for i in range(k+1):
             x[i] = stNz*rands[i]
-        for i in xrange(k+1, N):
+        for i in range(k+1, N):
             #  for k = 2, x[i] = B[0]*x[i-2], B[1]*x[i - 1]
             #  B[0]   is the weight of oldest time point
             #  B[k-1] is weight of most recent time point
@@ -271,7 +271,7 @@ def createDataPP(N, B, beta, u, stNz, p=1, trim=0, x=None, absrefr=0):
 
     beta0 = beta[0]
     lspk  = -2*absrefr
-    for i in xrange(k, N):
+    for i in range(k, N):
         e = _N.exp(u[i] + beta0* x[i]) * dt
         prbs[i]  = (p*e) / (1 + e)
         spks[i] = _N.random.binomial(1, prbs[i])
@@ -285,8 +285,9 @@ def createDataPP(N, B, beta, u, stNz, p=1, trim=0, x=None, absrefr=0):
 
     return x[trim:N], spks[trim:N], prbs[trim:N], fs[trim:N]
 
-def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
+def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
     """
+    B:  AR coefficeints
     stNz   innovation variance.  stNz == 0.  flat state.
     stNz == None   use x
     """
@@ -294,8 +295,8 @@ def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offs
     #  a[1]^2 + 4a[0]
     #  B[0] = -0.45
     #  B[1] =  0.9
-    if type(u) != _N.ndarray:
-        u = _N.ones(N) * u
+    if type(u_psth) != _N.ndarray:
+        u_psth = _N.ones(N) * u_psth
     if etme is None:
         etme = _N.ones(N)
 
@@ -306,15 +307,15 @@ def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offs
     else:
         if x is None:
             xc   = _N.empty((nRhythms, N+buf))   #  components
-            for nr in xrange(nRhythms):
+            for nr in range(nRhythms):
                 k = len(B[nr])
                 sstNz = _N.sqrt(stNz[nr])
 
                 rands = _N.random.randn(N+buf)
 
-                for i in xrange(k+1):
+                for i in range(k+1):
                     xc[nr, i] = sstNz*rands[i]
-                for i in xrange(k+1, N+buf):
+                for i in range(k+1, N+buf):
                     #  for k = 2, x[i] = B[0]*x[i-2], B[1]*x[i - 1]
                     #  B[0]   is the weight of oldest time point
                     #  B[k-1] is weight of most recent time point
@@ -345,10 +346,10 @@ def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offs
     #lh    = 300   #  at most 2000
     ht    = -int(_N.random.rand() * 50)
 
-    for i in xrange(N):
-        e = _N.exp(u[i] + offset[i] + cs * etme[i] * x[i+buf]) * dt
+    for i in range(N):
+        e = _N.exp(u_psth[i] + offset[i] + cs * etme[i] * x[i+buf]) * dt
         prbs[i]  = (p*e) / (1 + e)
-        e = _N.exp(u[i]) * dt
+        e = _N.exp(u_psth[i]) * dt
         prbsNOsc[i]  = (p*e) / (1 + e)
 
         lmd = 1 if i - ht >= lh else lambda2[i - ht]
@@ -381,15 +382,15 @@ def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offs
     else:
         if x == None:
             xc   = _N.empty((nRhythms, N+buf))   #  components
-            for nr in xrange(nRhythms):
+            for nr in range(nRhythms):
                 k = len(B[nr])
                 sstNz = _N.sqrt(stNz[nr])
 
                 rands = _N.random.randn(N+buf)
 
-                for i in xrange(k+1):
+                for i in range(k+1):
                     xc[nr, i] = sstNz*rands[i]
-                for i in xrange(k+1, N+buf):
+                for i in range(k+1, N+buf):
                     #  for k = 2, x[i] = B[0]*x[i-2], B[1]*x[i - 1]
                     #  B[0]   is the weight of oldest time point
                     #  B[k-1] is weight of most recent time point
@@ -415,7 +416,7 @@ def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offs
     #lh    = 300   #  at most 2000
     hst  = []    #  spikes whose history is still felt
 
-    for i in xrange(N):
+    for i in range(N):
         e = _N.exp(u[i] + cs * etme[i] * x[i+buf]) * dt
         prbs[i]  = (p*e) / (1 + e)
         e = _N.exp(u[i]) * dt
@@ -424,7 +425,7 @@ def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offs
         L  = len(hst)
         lmbd = 1
 
-        for j in xrange(L - 1, -1, -1):
+        for j in range(L - 1, -1, -1):
             ht = hst[j]
             #  if i == 10, ht == 9, lh == 1
             #  10 - 9 -1 == 0  < 1.   Still efective
@@ -458,15 +459,15 @@ def createDataPPl2Simp(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, 
     else:
         if x == None:
             xc   = _N.empty((nRhythms, N+buf))   #  components
-            for nr in xrange(nRhythms):
+            for nr in range(nRhythms):
                 k = len(B[nr])
                 sstNz = _N.sqrt(stNz[nr])
 
                 rands = _N.random.randn(N+buf)
 
-                for i in xrange(k+1):
+                for i in range(k+1):
                     xc[nr, i] = sstNz*rands[i]
-                for i in xrange(k+1, N+buf):
+                for i in range(k+1, N+buf):
                     #  for k = 2, x[i] = B[0]*x[i-2], B[1]*x[i - 1]
                     #  B[0]   is the weight of oldest time point
                     #  B[k-1] is weight of most recent time point
@@ -493,14 +494,14 @@ def createDataPPl2Simp(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, 
     hst  = []    #  spikes whose history is still felt
 
     ls     = -int(_N.random.rand()*20)
-    for i in xrange(N):
+    for i in range(N):
         e = _N.exp(u[i] + cs * x[i+buf]) * dt
         prbs[i]  = (p*e) / (1 + e)
 
         try:
             spks[i] = _N.random.binomial(1, prbs[i]*lambda2[i-ls-1])
         except IndexError:
-            print "i  %(i)d   ls  %(ls)d     i-ls-1  %(ils1)d" % {"i" : i, "ls" : ls, "ils1" : (i-ls-1)}
+            print("i  %(i)d   ls  %(ls)d     i-ls-1  %(ils1)d" % {"i" : i, "ls" : ls, "ils1" : (i-ls-1)})
         if spks[i] == 1:
             ls = i
 
@@ -512,7 +513,7 @@ def plottableSpkTms(dN, y):
     #  for each spike time,
     ts = []
     N  = len(dN)
-    for n in xrange(N):
+    for n in range(N):
         if dN[n] == 1:
             ts.append(n)
 
@@ -611,9 +612,9 @@ def arrstr(_arr):
         strg = "_N.array("
 
     c = 0
-    for r in xrange(arrR.shape[0] - 1):
+    for r in range(arrR.shape[0] - 1):
         strg += "["
-        for c in xrange(arrR.shape[1] - 1):
+        for c in range(arrR.shape[1] - 1):
             strg += ("% .6e" % arrR[r, c]) + ", "
         strg += ("% .6e" % arrR[r, c]) + "], \n"
 
@@ -622,7 +623,7 @@ def arrstr(_arr):
     strg += "["
 
     c = 0
-    for c in xrange(arrR.shape[1] - 1):
+    for c in range(arrR.shape[1] - 1):
         strg += ("% .6e" % arrR[r, c]) + ", "
     strg += ("% .6e" % arrR[r, arrR.shape[1] - 1]) + "]"
     if dim1 == 0:
@@ -637,7 +638,7 @@ def quickPSTH(alldat, TR, COLS, plot=False, fn=None, dt=0.001):
     spks = []
     N    = alldat.shape[0]
     
-    for tr in xrange(TR):
+    for tr in range(TR):
         if COLS == 4:
             spks.extend(_N.where(alldat[:, COLS-2+tr*COLS] == 1)[0])
         elif COLS == 3:
@@ -670,11 +671,11 @@ def disjointSubset(_superSet, subSetA):
         superSet = _superSet.tolist()
     else:
         superSet = _superSet
-    for i in xrange(len(subSetA)):
+    for i in range(len(subSetA)):
         try:
             superSet.pop(superSet.index(subSetA[i]))
         except ValueError:
-            print "Warning 2nd set is not a subset of the superset"
+            print("Warning 2nd set is not a subset of the superset")
             pass
     return list(superSet)
 

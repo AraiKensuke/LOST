@@ -1,17 +1,16 @@
 import scipy.optimize as _sco
 from shutil import copyfile
-from utildirs import setFN
-from mcmcARpPlot import plotWFandSpks
+from LOST.utildirs import setFN
+from LOST.mcmcARpPlot import plotWFandSpks
 import matplotlib.pyplot as _plt
 
-from kflib import createDataPPl2, savesetMT, savesetMTnosc, createDataAR, createFlucOsc
-from LOSTdirs import resFN, datFN
+from LOST.kflib import createDataPPl2, savesetMT, savesetMTnosc, createDataAR, createFlucOsc
+from LOST.LOSTdirs import resFN, datFN
 import numpy as _N
 import pickle as _pk
 import warnings
 import numpy.polynomial.polynomial as _Npp
 import utilities as _U
-from kstat import percentile
 
 TR         = None;     N        = None;      dt       = 0.001
 trim       = 50;
@@ -36,10 +35,10 @@ def create(setname):
     global dt, lambda2, rpsth, isis, us, csTR, etme, bGenOscUsingAR, f0VAR, f0, Bf, Ba, amp, amp_nz, dSA, dSF, psth
     if bGenOscUsingAR:
         ARcoeff = _N.empty((nRhythms, 2))
-        for n in xrange(nRhythms):
+        for n in range(nRhythms):
             ARcoeff[n]          = (-1*_Npp.polyfromroots(alfa[n])[::-1][1:]).real
         stNzs   = _N.empty((TR, nRhythms))
-        for tr in xrange(TR):
+        for tr in range(TR):
             if _N.random.rand() < lowQpc:
                 lowQs.append(tr)
                 stNzs[tr] = nzs[:, 0]
@@ -53,6 +52,7 @@ def create(setname):
         stdf  = _N.std(x)   #  choice of 4 std devs to keep phase monotonically increasing
         x, y = createDataAR(100000, Ba, sig, sig)
         stda  = _N.std(x)   #  choice of 4 std devs to keep phase monotonically increasing
+
 
     #  x, prbs, spks    3 columns
     nColumns = 3
@@ -72,7 +72,7 @@ def create(setname):
         us = _N.zeros(TR)
     elif (type(us) is float) or (type(us) is int):
         us = _N.zeros(TR) * us
-    for tr in xrange(TR):
+    for tr in range(TR):
         if bGenOscUsingAR:
             #x, dN, prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, ARcoeff, psth + us[tr], stNzs[tr], lambda2=lambda2, p=1, nRhythms=nRhythms, cs=csTR[tr], etme=etme[tr])
             #  psth is None.  Turn it off for now
@@ -90,13 +90,15 @@ def create(setname):
         probNOsc[:, tr] = prbsNOsc
         isis.extend(_U.toISI([_N.where(dN == 1)[0].tolist()])[0])
 
+
     savesetMT(TR, alldat, model, setname)
     savesetMTnosc(TR, probNOsc, setname)
 
     arfs = ""
     xlst = []
+
     if bGenOscUsingAR:
-        for nr in xrange(nRhythms):
+        for nr in range(nRhythms):
             arfs += "%.1fHz " % (500*ths[nr]/_N.pi)
             xlst.append(x[nr])
     else:
@@ -105,11 +107,14 @@ def create(setname):
 
     plotWFandSpks(N-1, dN, xlst, sTitle=sTitle, sFilename=resFN("generative", dir=setname))
 
+
+    """
     fig = _plt.figure(figsize=(8, 4))
     _plt.hist(isis, bins=range(100), color="black")
     _plt.grid()
     _plt.savefig(resFN("ISIhist", dir=setname))
-    _plt.close()
+    #_plt.close()
+
 
     fig = _plt.figure(figsize=(13, 4))
     _plt.plot(spksPT, marker=".", color="black", ms=8)
@@ -123,7 +128,7 @@ def create(setname):
         lambda2 = _N.array([0.0001] * absrefr)
     if lambda2 is not None:
         _N.savetxt(resFN("lambda2.dat", dir=setname), lambda2, fmt="%.7f")
-
+    """
     #  if we want to double bin size
     #lambda2db = 0.5*(lambda2[1::2] + lambda2[::2])
     #_N.savetxt(resFN("lambda2db.dat", dir=setname), lambda2db, fmt="%.7f")
@@ -131,3 +136,4 @@ def create(setname):
 
     if lowQpc > 0:
         _N.savetxt(resFN("lowQtrials", dir=setname), lowQs, fmt="%d")
+

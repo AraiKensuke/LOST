@@ -172,8 +172,11 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
                 B     = patsy.bs(x, knots=(knts[0:-1]), include_intercept=True)
                 iBTB   = _N.linalg.inv(_N.dot(B.T, B))
                 bGood  = True
-            except _N.linalg.linalg.LinAlgError, ValueError:
-                print "Linalg Error or Value Error in suggestPSTHKnots"
+            except _N.linalg.linalg.LinAlgError:
+                print("Linalg Error or Value Error in suggestPSTHKnots")
+            except ValueError:
+                print("Linalg Error or Value Error in suggestPSTHKnots")
+
 
         #a     = _N.dot(iBTB, _N.dot(B.T, _N.log(apsth)))
         a     = _N.dot(iBTB, _N.dot(B.T, apsth))
@@ -337,7 +340,7 @@ def reasonableHistory2(lmd, maxH=1.2, strT=1, cutoff=100, dcyTS=60):
     for i in xrange(ihiest + 1):
         cmpLmd[i] = lmd[i] * (maxH / hiest)
     
-    print ihiest
+    print(ihiest)
     if strT > 1:
 
         nIDP   = int((ihiest+1)*strT)   #  number of interpolated data points
@@ -393,7 +396,7 @@ def findAndSaturateHist(cl, refrT=30, MAXcl=None):
                 kts[it] = cktl[1:-1]
                 bOK = True
             except _N.linalg.linalg.LinAlgError:
-                print "LinAlgError in findAndSaturateHist part 1"
+                print("LinAlgError in findAndSaturateHist part 1")
 
     bI      = _N.where(scr == _N.min(scr))[0][0]
 
@@ -440,7 +443,7 @@ def findAndSaturateHist(cl, refrT=30, MAXcl=None):
                 kts[it] = cktl[1:-1]
                 bOK = True
             except _N.linalg.linalg.LinAlgError:
-                print "LinAlgError in findAndSaturateHist part 2"
+                print("LinAlgError in findAndSaturateHist part 2")
 
 
     bI      = _N.where(scr == _N.min(scr))[0][0]
