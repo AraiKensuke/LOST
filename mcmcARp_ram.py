@@ -6,7 +6,6 @@ import re as _re
 import matplotlib.pyplot as _plt
 
 import scipy.stats as _ss
-from LOSTdirs import resFN, datFN
 
 import numpy.polynomial.polynomial as _Npp
 import time as _tm
@@ -71,6 +70,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
     def gibbsSamp(self):  ###########################  GIBBSSAMPH
         oo          = self
+
+        print("****!!!!!!!!!!!!!!!!  dohist  %s" % str(oo.dohist))
 
         ooTR        = oo.TR
         ook         = oo.k
@@ -193,7 +194,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
         K     = _N.empty((oo.TR, oo.N + 1, oo.k))   #  kalman gain
 
-        iterBLOCKS  = oo.ITERS/oo.peek
+        iterBLOCKS  = oo.ITERS//oo.peek
         smpx_tmp = _N.empty((oo.TR, oo.N+1, oo.k))
         
         ######  Gibbs sampling procedure
@@ -356,7 +357,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.smpx[:, 0, 0:ook-2]   = oo.smpx[:, 2, 2:]
 
                     if oo.doBsmpx and (it % oo.BsmpxSkp == 0):
-                        oo.Bsmpx[:, it / oo.BsmpxSkp, 2:]    = oo.smpx[:, 2:, 0]
+                        oo.Bsmpx[:, it // oo.BsmpxSkp, 2:]    = oo.smpx[:, 2:, 0]
                     stds = _N.std(oo.smpx[:, 2+oo.ignr:, 0], axis=1)
                     oo.mnStds[it] = _N.mean(stds, axis=0)
                     print("mnStd  %.3f" % oo.mnStds[it])
@@ -411,7 +412,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                         
                         
                         oo.q2[:] = _ss.invgamma.rvs(oo.a2, scale=BB2)
-                    print("%(a).3f    %(B).3f     %(q2).2e" % {"a" : oo.a2, "B" : BB2, "q2" : oo.q2[0]})
                     oo.smp_q2[:, it]= oo.q2
 
                 ttt7 = _tm.time()
@@ -483,7 +483,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         # with open("mARp.dump", "rb") as f:
         # lm = pickle.load(f)
 
-    def run(self, runDir=None, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False): ###########  RUN
+    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False): ###########  RUN
         oo     = self    #  call self oo.  takes up less room on line
 
         oo.setname = os.getcwd().split("/")[-1]
@@ -497,7 +497,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.s2_x00       = _arl.dcyCovMat(oo.k, _N.ones(oo.k), 0.4)
         oo.restarts = 0
 
-        oo.loadDat(trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5)
+        oo.loadDat(datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5)
         oo.setParams()
 
         print("readSmpls   ")

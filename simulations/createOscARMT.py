@@ -29,9 +29,8 @@ bGenOscUsingAR = True;  bGenOscUsingSines = False;
 f0VAR      = None;     f0         = None;     Bf         = None;     Ba       = None;      amp      = 1;   amp_nz  = 0;
 dSA        = 5;     dSF        = 5;
 
-def create(setname):
+def create(outfn):
     # _plt.ioff()
-    copyfile("%s.py" % setname, "%(s)s/%(s)s.py" % {"s" : setname, "to" : setFN("%s.py" % setname, dirn=setname, create=True)})
     global dt, lambda2, rpsth, isis, us, csTR, etme, bGenOscUsingAR, f0VAR, f0, Bf, Ba, amp, amp_nz, dSA, dSF, psth
     if bGenOscUsingAR:
         ARcoeff = _N.empty((nRhythms, 2))
@@ -91,8 +90,8 @@ def create(setname):
         isis.extend(_U.toISI([_N.where(dN == 1)[0].tolist()])[0])
 
 
-    savesetMT(TR, alldat, model, setname)
-    savesetMTnosc(TR, probNOsc, setname)
+    savesetMT(TR, alldat, model, outfn)
+    #savesetMTnosc(TR, probNOsc, setname)
 
     arfs = ""
     xlst = []
@@ -105,7 +104,7 @@ def create(setname):
         xlst.append(x[0])
     sTitle = "AR2 freq %(fs)s    spk Hz %(spkf).1fHz   TR=%(tr)d   N=%(N)d" % {"spkf" : (_N.sum(spksPT) / (N*TR*0.001)), "tr" : TR, "N" : N, "fs" : arfs}
 
-    plotWFandSpks(N-1, dN, xlst, sTitle=sTitle, sFilename=resFN("generative", dir=setname))
+    #plotWFandSpks(N-1, dN, xlst, sTitle=sTitle, sFilename=resFN("generative", dir=setname))
 
 
     """

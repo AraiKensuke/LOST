@@ -8,7 +8,6 @@ import pyPG as lw
 import LOST.commdefs as _cd
 import os
 import numpy as _N
-from LOST.LOSTdirs import resFN, datFN
 import re as _re
 from LOST.ARcfSmplFuncs import ampAngRep, buildLims, FfromLims, dcmpcff, initF
 import numpy.polynomial.polynomial as _Npp
@@ -111,11 +110,11 @@ class mcmcARspk(mAR.mcmcAR):
         # if (self.noAR is not None) or (self.noAR == False):
         #     self.lfc         = _lfc.logerfc()
 
-    def loadDat(self, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None): #################  loadDat
+    def loadDat(self, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None): #################  loadDat
         oo = self
         bGetFP = False
 
-        x_st_cnts = _N.loadtxt(resFN("xprbsdN.dat", dir=oo.setname))
+        x_st_cnts = _N.loadtxt(datfilename)
         y_ch      = 2   #  spike channel
         p = _re.compile("^\d{6}")   # starts like "exptDate-....."
         m = p.match(oo.setname)
@@ -127,7 +126,8 @@ class mcmcARspk(mAR.mcmcAR):
             bRealDat, dch = False, 3
         else:
             flt_ch, ph_ch, bGetFP = 1, 3, True  # Filtered LFP, Hilb Trans
-        TR = x_st_cnts.shape[1] / dch    #  number of trials will get filtered
+
+        TR = x_st_cnts.shape[1] // dch    #  number of trials will get filtered
 
         #  If I only want to use a small portion of the data
         oo.N   = x_st_cnts.shape[0] - 1
@@ -309,7 +309,7 @@ class mcmcARspk(mAR.mcmcAR):
         print("^^^^^^   allocateSmp  %d" % iters)
         ####  initialize
         if Bsmpx:
-            oo.Bsmpx        = _N.zeros((oo.TR, iters/oo.BsmpxSkp, (oo.N+1) + 2))
+            oo.Bsmpx        = _N.zeros((oo.TR, iters//oo.BsmpxSkp, (oo.N+1) + 2))
         oo.smp_u        = _N.zeros((oo.TR, iters))
         oo.smp_hS        = _N.zeros((oo.histknots, iters))   # history spline
         oo.smp_hist        = _N.zeros((oo.N+1, iters))   # history spline
@@ -514,26 +514,6 @@ class mcmcARspk(mAR.mcmcAR):
 
         oo.zts0 = _N.array(oo.zts[:, :, 1:, 0], dtype=_N.float16)
 
-    def dump(self):
-        oo    = self
-        pcklme = [oo]
-        oo.Bsmpx = None
-        oo.smpx  = None
-        oo.wts   = None
-        oo.uts   = None
-        #oo.lfc   = None
-        oo.rts   = None
-        oo.zts   = None
-
-        dmp = open("mARp.dump", "wb")
-        pickle.dump(pcklme, dmp, -1)
-        dmp.close()
-
-        # import pickle
-        # with open("mARp.dump", "rb") as f:
-        # lm = pickle.load(f)
-
-
     def readdump(self):
         oo    = self
 
@@ -612,10 +592,7 @@ class mcmcARspk(mAR.mcmcAR):
         _plt.hist(oo.amps[startIt:, 0], bins=_N.linspace(_N.min(oo.amps[startIt:, 0]), _N.max(oo.amps[startIt:, 0]), NB), color="black")
         _plt.axvline(x=loA, color="red")
         _plt.axvline(x=hiA, color="red")
-        if dir is None:
-            _plt.savefig(resFN("chosenFsAmps%d" % startIt, dir=oo.setname))
-        else:
-            _plt.savefig(resFN("%(sn)s/chosenFsAmps%(it)d" % {"sn" : dir, "it" : startIt}, dir=oo.setname))
+        _plt.savefig("%(od)s/chosenFsAmps%(sI)d" % {"od" : oo.outdir, "sI" : startIt})
         _plt.close()
 
         indsFs = _N.where((oo.fs[startIt:, 0] >= loF) & (oo.fs[startIt:, 0] <= hiF))
@@ -628,10 +605,7 @@ class mcmcARspk(mAR.mcmcAR):
         #alfas = _N.mean(oo.allalfas[asfsInds], axis=0)
         pcklme = [aus, q, oo.allalfas[asfsInds], aSs, oo.B, hSs, oo.Hbf]
         
-        if dir is None:
-            dmp = open(resFN("posteriorModes%d.pkl" % startIt, dir=oo.setname), "wb")
-        else:
-            dmp = open(resFN("%(sn)s/posteriorModes%(it)d.pkl" % {"sn" : dir, "it" : startIt}, dir=oo.setname), "wb")
+        dmp = open("%(od)s/posteriorModes%(sI)d.pkl" % {"od" : oo.outdir, "sI" : startIt}, "wb")
         pickle.dump(pcklme, dmp, -1)
         dmp.close()
 

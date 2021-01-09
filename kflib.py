@@ -561,7 +561,8 @@ def savesetMT(TR, alldat, model, name):
         fmt += "%.4e %d "
         fmt *= TR
 
-    _N.savetxt(resFN("%s.dat" % bfn, dir=name, create=True), alldat, fmt=fmt)
+    #_N.savetxt(resFN("%s.dat" % bfn, dir=name, create=True), alldat, fmt=fmt)
+    _N.savetxt(name, alldat, fmt=fmt)
 
 def savesetMTnosc(TR, alldat, name):   #  also save PSTH
     #  u, B, singleFreqAR, dt, stNz, x, dN, prbs

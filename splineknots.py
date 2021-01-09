@@ -1,6 +1,7 @@
 import numpy as _N
 import patsy
-import LOST.utilities as _U
+#import LOST.utilities as _U
+import ka_tools.utilities as _U
 import matplotlib.pyplot as _plt
 from LOST.utildirs import setFN
 
@@ -50,7 +51,7 @@ def genKnts(tscl, xMax):
 #     r2s    = _N.empty(ITERS)
 
 #     ac = _N.zeros(c)
-#     for tr in xrange(ITERS):
+#     for tr in range(ITERS):
 #         bGood = False
 #         while not bGood:
 #             knts = genKnts(tscl, xs[-1]*0.9)
@@ -94,7 +95,7 @@ def genKnts(tscl, xMax):
 #     r2s    = _N.empty(ITERS)
 
 #     ac = _N.zeros(c)
-#     for tr in xrange(ITERS):
+#     for tr in range(ITERS):
 #         bGood = False
 #         while not bGood:
 #             knts = genKnts(tscl, xs[-1]*0.9)
@@ -137,7 +138,7 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
     """
     spkts  = _U.fromBinDat(bindat, SpkTs=True)
 
-    h, bs = _N.histogram(spkts, bins=_N.linspace(0, N, (N/bnsz)+1))
+    h, bs = _N.histogram(spkts, bins=_N.linspace(0, N, (N//bnsz)+1))
     
     fs     = (h / (TR * bnsz * dt))
     apsth = _N.repeat(fs, bnsz)    #    piecewise boxy approximate PSTH
@@ -154,7 +155,7 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
     tsMin = tAvg*0.5
     tsMax = tAvg*1.5
 
-    for it in xrange(ITERS):
+    for it in range(ITERS):
         bGood = False
         while not bGood:
             try:
@@ -164,7 +165,7 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
                 knts    = _N.empty(iknts+1)
 
                 knts[0] = pieces[0]
-                for i in xrange(1, iknts+1):
+                for i in range(1, iknts+1):
                     knts[i] = knts[i-1] + pieces[i]
                 knts /= knts[-1]
                 knts[0:-1] *= N
@@ -210,7 +211,7 @@ def display(N, dt, tscl, nhaz, apsth, lambda2, psth, histknts, psthknts, dir=Non
     x  = _N.linspace(0., N-1, N, endpoint=False)  # in units of ms.
 
     theknts = [histknts, psthknts]
-    for f in xrange(1, 3):
+    for f in range(1, 3):
         knts = theknts[f-1]
         
         if f == 1:
@@ -266,7 +267,7 @@ def reasonableHist(lmd, maxH=1.2):
     bFellOnce=False
     bForce1 = False   #  force it to be 1 hereafter
     
-    for i in xrange(L):
+    for i in range(L):
         if (not bAbv) and lmd[i] > 1:
             bAbv = True
             
@@ -301,7 +302,7 @@ def reasonableHistory(lmd, maxH=1.2, cutoff=100):
     bFellOnce=False
     bForce1 = False   #  force it to be 1 hereafter
     
-    for i in xrange(L):
+    for i in range(L):
         if (not bAbv) and lmd[i] > 1:
             bAbv = True
             
@@ -337,7 +338,7 @@ def reasonableHistory2(lmd, maxH=1.2, strT=1, cutoff=100, dcyTS=60):
     ###  
     x    = _N.linspace(0, ihiest, ihiest+1)
 
-    for i in xrange(ihiest + 1):
+    for i in range(ihiest + 1):
         cmpLmd[i] = lmd[i] * (maxH / hiest)
     
     print(ihiest)
@@ -351,7 +352,7 @@ def reasonableHistory2(lmd, maxH=1.2, strT=1, cutoff=100, dcyTS=60):
         ihiest = int(ihiest*strT)
 
     dy  = (maxH - 1) / float(dcyTS - ihiest)
-    for i in xrange(ihiest + 1, dcyTS):
+    for i in range(ihiest + 1, dcyTS):
         cmpLmd[i] = maxH -  (i - ihiest) * dy
 
     return cmpLmd
@@ -373,13 +374,13 @@ def findAndSaturateHist(cl, refrT=30, MAXcl=None):
     kts   = _N.empty((ITERS, dgr))
 
     lcl   = _N.log(cl)
-    for it in xrange(ITERS):
+    for it in range(ITERS):
         bOK = False
         while not bOK:
             try:
                 ktl = _N.random.rand(dgr+1) 
 
-                for d in xrange(1, dgr+2):
+                for d in range(1, dgr+2):
                     cktl[d] = cktl[d-1] + ktl[d-1]
                 cktl /= cktl[-1]
 
@@ -420,13 +421,13 @@ def findAndSaturateHist(cl, refrT=30, MAXcl=None):
         ftdC[refrT+lt1Inds] = 1
     
     lftdC = _N.log(ftdC)
-    for it in xrange(ITERS):
+    for it in range(ITERS):
         bOK = False
         while not bOK:
             try:
                 ktl = _N.random.rand(dgr+1) 
 
-                for d in xrange(1, dgr+2):
+                for d in range(1, dgr+2):
                     cktl[d] = cktl[d-1] + ktl[d-1]
                 cktl /= cktl[-1]
 

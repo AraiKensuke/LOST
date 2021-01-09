@@ -80,3 +80,5 @@ class mcmcAR:
     u_u          = -3;             s2_u         = 2.5
     #  initial states
     u_x00        = None;          s2_x00       = None
+
+    runDir = None
