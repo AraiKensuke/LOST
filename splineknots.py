@@ -1,8 +1,9 @@
 import numpy as _N
 import patsy
-import utilities as _U
+#import LOST.utilities as _U
+import ka_tools.utilities as _U
 import matplotlib.pyplot as _plt
-from utildirs import setFN
+from LOST.utildirs import setFN
 
 v = 5
 c = 5
@@ -50,7 +51,7 @@ def genKnts(tscl, xMax):
 #     r2s    = _N.empty(ITERS)
 
 #     ac = _N.zeros(c)
-#     for tr in xrange(ITERS):
+#     for tr in range(ITERS):
 #         bGood = False
 #         while not bGood:
 #             knts = genKnts(tscl, xs[-1]*0.9)
@@ -94,7 +95,7 @@ def genKnts(tscl, xMax):
 #     r2s    = _N.empty(ITERS)
 
 #     ac = _N.zeros(c)
-#     for tr in xrange(ITERS):
+#     for tr in range(ITERS):
 #         bGood = False
 #         while not bGood:
 #             knts = genKnts(tscl, xs[-1]*0.9)
@@ -135,12 +136,25 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
     """
     bnsz   binsize used to calculate approximate PSTH
     """
+    rszd = False
+    if N % bnsz != 0:
+        rszd = True
+        pcs = _N.ceil(N/bnsz)
+        bnsz = int(_N.floor(N / pcs))
+
     spkts  = _U.fromBinDat(bindat, SpkTs=True)
 
-    h, bs = _N.histogram(spkts, bins=_N.linspace(0, N, (N/bnsz)+1))
-    
+    #  apsth needs to be same size as N.  ie N%bnsz needs to be 0
+    h, bs = _N.histogram(spkts, bins=_N.linspace(0, N, (N//bnsz)+1))
+
     fs     = (h / (TR * bnsz * dt))
-    apsth = _N.repeat(fs, bnsz)    #    piecewise boxy approximate PSTH
+    _apsth = _N.repeat(fs, bnsz)    #    piecewise boxy approximate PSTH
+    if rszd:
+        apsth = _N.zeros(N)
+        apsth[0:(N//bnsz)*bnsz] = _apsth
+        apsth[(N//bnsz)*bnsz:]  = apsth[(N//bnsz)*bnsz-1]
+    else:
+        apsth = _apsth
 
     apsth *= dt
 
@@ -154,7 +168,7 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
     tsMin = tAvg*0.5
     tsMax = tAvg*1.5
 
-    for it in xrange(ITERS):
+    for it in range(ITERS):
         bGood = False
         while not bGood:
             try:
@@ -164,7 +178,7 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
                 knts    = _N.empty(iknts+1)
 
                 knts[0] = pieces[0]
-                for i in xrange(1, iknts+1):
+                for i in range(1, iknts+1):
                     knts[i] = knts[i-1] + pieces[i]
                 knts /= knts[-1]
                 knts[0:-1] *= N
@@ -172,8 +186,11 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
                 B     = patsy.bs(x, knots=(knts[0:-1]), include_intercept=True)
                 iBTB   = _N.linalg.inv(_N.dot(B.T, B))
                 bGood  = True
-            except _N.linalg.linalg.LinAlgError, ValueError:
-                print "Linalg Error or Value Error in suggestPSTHKnots"
+            except _N.linalg.linalg.LinAlgError:
+                print("Linalg Error or Value Error in suggestPSTHKnots")
+            except ValueError:
+                print("Linalg Error or Value Error in suggestPSTHKnots")
+
 
         #a     = _N.dot(iBTB, _N.dot(B.T, _N.log(apsth)))
         a     = _N.dot(iBTB, _N.dot(B.T, apsth))
@@ -207,7 +224,7 @@ def display(N, dt, tscl, nhaz, apsth, lambda2, psth, histknts, psthknts, dir=Non
     x  = _N.linspace(0., N-1, N, endpoint=False)  # in units of ms.
 
     theknts = [histknts, psthknts]
-    for f in xrange(1, 3):
+    for f in range(1, 3):
         knts = theknts[f-1]
         
         if f == 1:
@@ -263,7 +280,7 @@ def reasonableHist(lmd, maxH=1.2):
     bFellOnce=False
     bForce1 = False   #  force it to be 1 hereafter
     
-    for i in xrange(L):
+    for i in range(L):
         if (not bAbv) and lmd[i] > 1:
             bAbv = True
             
@@ -298,7 +315,7 @@ def reasonableHistory(lmd, maxH=1.2, cutoff=100):
     bFellOnce=False
     bForce1 = False   #  force it to be 1 hereafter
     
-    for i in xrange(L):
+    for i in range(L):
         if (not bAbv) and lmd[i] > 1:
             bAbv = True
             
@@ -334,10 +351,10 @@ def reasonableHistory2(lmd, maxH=1.2, strT=1, cutoff=100, dcyTS=60):
     ###  
     x    = _N.linspace(0, ihiest, ihiest+1)
 
-    for i in xrange(ihiest + 1):
+    for i in range(ihiest + 1):
         cmpLmd[i] = lmd[i] * (maxH / hiest)
     
-    print ihiest
+    print(ihiest)
     if strT > 1:
 
         nIDP   = int((ihiest+1)*strT)   #  number of interpolated data points
@@ -348,7 +365,7 @@ def reasonableHistory2(lmd, maxH=1.2, strT=1, cutoff=100, dcyTS=60):
         ihiest = int(ihiest*strT)
 
     dy  = (maxH - 1) / float(dcyTS - ihiest)
-    for i in xrange(ihiest + 1, dcyTS):
+    for i in range(ihiest + 1, dcyTS):
         cmpLmd[i] = maxH -  (i - ihiest) * dy
 
     return cmpLmd
@@ -370,13 +387,13 @@ def findAndSaturateHist(cl, refrT=30, MAXcl=None):
     kts   = _N.empty((ITERS, dgr))
 
     lcl   = _N.log(cl)
-    for it in xrange(ITERS):
+    for it in range(ITERS):
         bOK = False
         while not bOK:
             try:
                 ktl = _N.random.rand(dgr+1) 
 
-                for d in xrange(1, dgr+2):
+                for d in range(1, dgr+2):
                     cktl[d] = cktl[d-1] + ktl[d-1]
                 cktl /= cktl[-1]
 
@@ -393,7 +410,7 @@ def findAndSaturateHist(cl, refrT=30, MAXcl=None):
                 kts[it] = cktl[1:-1]
                 bOK = True
             except _N.linalg.linalg.LinAlgError:
-                print "LinAlgError in findAndSaturateHist part 1"
+                print("LinAlgError in findAndSaturateHist part 1")
 
     bI      = _N.where(scr == _N.min(scr))[0][0]
 
@@ -417,13 +434,13 @@ def findAndSaturateHist(cl, refrT=30, MAXcl=None):
         ftdC[refrT+lt1Inds] = 1
     
     lftdC = _N.log(ftdC)
-    for it in xrange(ITERS):
+    for it in range(ITERS):
         bOK = False
         while not bOK:
             try:
                 ktl = _N.random.rand(dgr+1) 
 
-                for d in xrange(1, dgr+2):
+                for d in range(1, dgr+2):
                     cktl[d] = cktl[d-1] + ktl[d-1]
                 cktl /= cktl[-1]
 
@@ -440,7 +457,7 @@ def findAndSaturateHist(cl, refrT=30, MAXcl=None):
                 kts[it] = cktl[1:-1]
                 bOK = True
             except _N.linalg.linalg.LinAlgError:
-                print "LinAlgError in findAndSaturateHist part 2"
+                print("LinAlgError in findAndSaturateHist part 2")
 
 
     bI      = _N.where(scr == _N.min(scr))[0][0]

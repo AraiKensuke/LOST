@@ -1,20 +1,19 @@
 #
-from mcmcARpFuncs import loadL2, runNotes, loadKnown
+from LOST.mcmcARpFuncs import loadL2, runNotes, loadKnown
 from filter import bpFilt, lpFilt, gauKer
-import mcmcAR as mAR
-import ARlib as _arl
+import LOST.mcmcAR as mAR
+import LOST.ARlib as _arl
 import pyPG as lw
 #import logerfc as _lfc
-import commdefs as _cd
+import LOST.commdefs as _cd
 import os
 import numpy as _N
-from LOSTdirs import resFN, datFN
 import re as _re
-from ARcfSmplFuncs import ampAngRep, buildLims, FfromLims, dcmpcff, initF
+from LOST.ARcfSmplFuncs import ampAngRep, buildLims, FfromLims, dcmpcff, initF
 import numpy.polynomial.polynomial as _Npp
-from kflib import createDataAR
+from LOST.kflib import createDataAR, downsamplespkdat
 #
-import splineknots as _spknts
+import LOST.splineknots as _spknts
 import patsy
 import pickle
 import matplotlib.pyplot as _plt
@@ -111,24 +110,29 @@ class mcmcARspk(mAR.mcmcAR):
         # if (self.noAR is not None) or (self.noAR == False):
         #     self.lfc         = _lfc.logerfc()
 
-    def loadDat(self, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None): #################  loadDat
+    def loadDat(self, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None): #################  loadDat
         oo = self
         bGetFP = False
 
-        x_st_cnts = _N.loadtxt(resFN("xprbsdN.dat", dir=oo.setname))
-        y_ch      = 2   #  spike channel
+        x_st_cnts = _N.loadtxt(datfilename)
+        #y_ch      = 2   #  spike channel
+        y_ch      = 0   #  spike channel
         p = _re.compile("^\d{6}")   # starts like "exptDate-....."
         m = p.match(oo.setname)
 
         bRealDat = True
-        dch = 4    #  # of data columns per trial
+        #dch = 4    #  # of data columns per trial
+        dch = 1
 
         if m == None:   #  not real data
-            bRealDat, dch = False, 3
+            #bRealDat, dch = False, 3
+            bRealDat, dch = False, 1
         else:
             flt_ch, ph_ch, bGetFP = 1, 3, True  # Filtered LFP, Hilb Trans
-        TR = x_st_cnts.shape[1] / dch    #  number of trials will get filtered
 
+        TR = x_st_cnts.shape[1] // dch    #  number of trials will get filtered
+
+        print(TR)
         #  If I only want to use a small portion of the data
         oo.N   = x_st_cnts.shape[0] - 1
         if oo.t1 == None:
@@ -136,11 +140,11 @@ class mcmcARspk(mAR.mcmcAR):
         #  meaning of N changes here
         N   = oo.t1 - 1 - oo.t0
 
-        x   = x_st_cnts[oo.t0:oo.t1, ::dch].T
+        #x   = x_st_cnts[oo.t0:oo.t1, ::dch].T
         y   = x_st_cnts[oo.t0:oo.t1, y_ch::dch].T
-        if bRealDat:
-            fx  = x_st_cnts[oo.t0:oo.t1, flt_ch::dch].T
-            px  = x_st_cnts[oo.t0:oo.t1, ph_ch::dch].T
+        # if bRealDat:
+        #     fx  = x_st_cnts[oo.t0:oo.t1, flt_ch::dch].T
+        #     px  = x_st_cnts[oo.t0:oo.t1, ph_ch::dch].T
 
         ####  Now keep only trials that have spikes
         kpTrl = range(TR)
@@ -153,20 +157,18 @@ class mcmcARspk(mAR.mcmcAR):
                 if _N.sum(y[utrl, :]) > 0:
                     oo.useTrials.append(ki)
             except ValueError:
-                print "a trial requested to use will be removed %d" % utrl
+                print("a trial requested to use will be removed %d" % utrl)
 
         ######  oo.y are for trials that have at least 1 spike
-        oo.y     = _N.array(y[oo.useTrials], dtype=_N.int)
-        oo.x     = _N.array(x[oo.useTrials])
-        if bRealDat:
-            oo.fx    = _N.array(fx[oo.useTrials])
-            oo.px    = _N.array(px[oo.useTrials])
+        y     = _N.array(y[oo.useTrials], dtype=_N.int)
+        
+        evry, dsdat = downsamplespkdat(y, 0.01)
 
-        #  INITIAL samples
-        if TR > 1:
-            mnCt= _N.mean(oo.y, axis=1)
-        else:
-            mnCt= _N.array([_N.mean(oo.y)])
+        oo.y     = _N.array(dsdat[oo.useTrials], dtype=_N.int)        
+        #oo.x     = _N.array(x[oo.useTrials])
+        # if bRealDat:
+        #     oo.fx    = _N.array(fx[oo.useTrials])
+        #     oo.px    = _N.array(px[oo.useTrials])
 
         #  remove trials where data has no information
         rmTrl = []
@@ -176,6 +178,10 @@ class mcmcARspk(mAR.mcmcAR):
 
         oo.TR    = len(oo.useTrials)
         oo.N     = N
+        oo.t1 = oo.t0 + dsdat.shape[1]
+        oo.N  = oo.t1 - 1 - oo.t0
+
+
 
         oo.smpx        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k))   #  start at 0 + u
         oo.ws          = _N.empty((oo.TR, oo.N+1), dtype=_N.float)
@@ -187,7 +193,7 @@ class mcmcARspk(mAR.mcmcAR):
         tot_isi = 0
         nisi    = 0
         isis = []
-        for tr in xrange(oo.TR):
+        for tr in range(oo.TR):
             spkts = _N.where(oo.y[tr] == 1)[0]
             isis.extend(_N.diff(spkts))
         
@@ -216,7 +222,7 @@ class mcmcARspk(mAR.mcmcAR):
             oo.h0_2 = int(sisis[int(Lisi*0.5)])#oo.h0_2*3
             oo.h0_3 = int(sisis[int(Lisi*0.65)])#oo.h0_2*3
             oo.h0_4 = int(sisis[int(Lisi*0.8)])#oo.h0_2*3
-            print "-----  %(1)d  %(2)d  %(3)d  %(4)d" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4}
+            print("-----  %(1)d  %(2)d  %(3)d  %(4)d" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4})
             oo.hist_max_at_0 = True
             oo.histknots = 9
         else:      #  a pause
@@ -235,7 +241,7 @@ class mcmcARspk(mAR.mcmcAR):
 
             #pts = _N.array([19, 21, 23, 33])  #  quick hack for f64-1-Xaa/wp_0-60_5_1a
             spts = _N.sort(pts)
-            for i in xrange(3):
+            for i in range(3):
                 if spts[i] == spts[i+1]:
                     spts[i+1] += 1
             oo.h0_2 = spts[0]
@@ -255,7 +261,7 @@ class mcmcARspk(mAR.mcmcAR):
 
             #oo.h0_5 = 35 if (oo.h0_5 > 35) else oo.h0_5
 
-            print "-----  %(1)d  %(2)d  %(3)d  %(4)d  %(5)d" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4, "5" : oo.h0_5}
+            print("-----  %(1)d  %(2)d  %(3)d  %(4)d  %(5)d" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4, "5" : oo.h0_5})
 
             oo.h0_1 = oo.h0_1 if h0_1 is None else h0_1
             oo.h0_2 = oo.h0_2 if h0_2 is None else h0_2
@@ -263,7 +269,7 @@ class mcmcARspk(mAR.mcmcAR):
             oo.h0_4 = oo.h0_4 if h0_4 is None else h0_4
             oo.h0_5 = oo.h0_5 if h0_5 is None else h0_5
 
-            print "-----  %(1)d  %(2)d  %(3)d  %(4)d  %(5)d   (overridden?)" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4, "5" : oo.h0_5}
+            print("-----  %(1)d  %(2)d  %(3)d  %(4)d  %(5)d   (overridden?)" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4, "5" : oo.h0_5})
 
             oo.hist_max_at_0 = False
             oo.histknots = 10
@@ -271,7 +277,7 @@ class mcmcARspk(mAR.mcmcAR):
 
 
         crats = _N.zeros(maxisi-1)
-        for n in xrange(0, maxisi-2):
+        for n in range(0, maxisi-2):
             crats[n+1] = crats[n] + cnts[n]
         crats /= crats[-1]
 
@@ -279,7 +285,7 @@ class mcmcARspk(mAR.mcmcAR):
         if oo.t0_is_t_since_1st_spk is None:
             oo.t0_is_t_since_1st_spk = _N.empty(oo.TR, dtype=_N.int)
             rands = _N.random.rand(oo.TR)
-            for tr in xrange(oo.TR):
+            for tr in range(oo.TR):
                 spkts = _N.where(oo.y[tr] == 1)[0]
 
                 if len(spkts) > 0:
@@ -291,7 +297,7 @@ class mcmcARspk(mAR.mcmcAR):
 
                     oo.t0_is_t_since_1st_spk[tr] = isi
         else:
-            print "using saved t0_is_t_since_1st_spk"
+            print("using saved t0_is_t_since_1st_spk")
 
         oo.loghist = loadL2(oo.setname, fn=oo.histFN)
         oo.dohist = True if oo.loghist is None else False
@@ -306,10 +312,10 @@ class mcmcARspk(mAR.mcmcAR):
 
     def allocateSmp(self, iters, Bsmpx=False):
         oo = self
-        print "^^^^^^   allocateSmp  %d" % iters
+        print("^^^^^^   allocateSmp  %d" % iters)
         ####  initialize
         if Bsmpx:
-            oo.Bsmpx        = _N.zeros((oo.TR, iters/oo.BsmpxSkp, (oo.N+1) + 2))
+            oo.Bsmpx        = _N.zeros((oo.TR, iters//oo.BsmpxSkp, (oo.N+1) + 2))
         oo.smp_u        = _N.zeros((oo.TR, iters))
         oo.smp_hS        = _N.zeros((oo.histknots, iters))   # history spline
         oo.smp_hist        = _N.zeros((oo.N+1, iters))   # history spline
@@ -323,12 +329,12 @@ class mcmcARspk(mAR.mcmcAR):
         oo.allalfas     = _N.empty((iters, oo.k), dtype=_N.complex)
         if oo.pkldalfas is not None:
             oo.allalfas[0]  = oo.pkldalfas
-            for r in xrange(oo.R):
+            for r in range(oo.R):
                 oo.F_alfa_rep[r] = oo.pkldalfas[r].real
-            for c in xrange(oo.C):
+            for c in range(oo.C):
                 oo.F_alfa_rep[oo.R+2*c]   = oo.pkldalfas[oo.R+2*c]
                 oo.F_alfa_rep[oo.R+2*c+1] = oo.pkldalfas[oo.R+2*c + 1]
-            print oo.F_alfa_rep
+            print(oo.F_alfa_rep)
         #oo.uts          = _N.empty((oo.TR, iters, oo.R, oo.N+2))
         #oo.wts          = _N.empty((oo.TR, iters, oo.C, oo.N+3))
         oo.ranks        = _N.empty((iters, oo.C), dtype=_N.int)
@@ -352,7 +358,7 @@ class mcmcARspk(mAR.mcmcAR):
         oo.F[0] =  _N.random.randn(oo.k)/_N.arange(1, oo.k+1)**2
         oo.F[0, 0] = 0.8
         oo.Fs    = _N.zeros((oo.TR, oo.k, oo.k))
-        for tr in xrange(oo.TR):
+        for tr in range(oo.TR):
             oo.Fs[tr] = oo.F
         oo.Ik    = _N.identity(oo.k)
         oo.IkN   = _N.tile(oo.Ik, (oo.N+1, 1, 1))
@@ -388,7 +394,7 @@ class mcmcARspk(mAR.mcmcAR):
         if oo.F_alfa_rep is None:
             oo.F_alfa_rep  = initF(oo.R, oo.Cs, oo.Cn, ifs=oo.ifs).tolist()   #  init F_alfa_rep
 
-        print ampAngRep(oo.F_alfa_rep)
+        print(ampAngRep(oo.F_alfa_rep))
         if oo.q20 is None:
             oo.q20         = 0.00077
         oo.q2          = _N.ones(oo.TR)*oo.q20
@@ -399,7 +405,7 @@ class mcmcARspk(mAR.mcmcAR):
         oo.F[0] = oo.F0
         _N.fill_diagonal(oo.F[1:, 0:oo.k-1], 1)
 
-        for tr in xrange(oo.TR):
+        for tr in range(oo.TR):
             oo.Fs[tr] = oo.F
 
 
@@ -415,7 +421,7 @@ class mcmcARspk(mAR.mcmcAR):
         wf =  gauKer(w)
         gk = _N.empty((oo.TR, oo.N+1))
         fgk= _N.empty((oo.TR, oo.N+1))
-        for m in xrange(oo.TR):
+        for m in range(oo.TR):
             gk[m] =  _N.convolve(oo.y[m], wf, mode="same")
             gk[m] =  gk[m] - _N.mean(gk[m])
             gk[m] /= 5*_N.std(gk[m])
@@ -427,9 +433,9 @@ class mcmcARspk(mAR.mcmcAR):
             else:
                 oo.smpx[m, 2:, 0] = fgk[m, :]
 
-            for n in xrange(2+oo.k-1, oo.N+1+2):  # CREATE square smpx
+            for n in range(2+oo.k-1, oo.N+1+2):  # CREATE square smpx
                 oo.smpx[m, n, 1:] = oo.smpx[m, n-oo.k+1:n, 0][::-1]
-            for n in xrange(2+oo.k-2, -1, -1):  # CREATE square smpx
+            for n in range(2+oo.k-2, -1, -1):  # CREATE square smpx
                 oo.smpx[m, n, 0:oo.k-1] = oo.smpx[m, n+1, 1:oo.k]
                 oo.smpx[m, n, oo.k-1] = _N.dot(oo.F0, oo.smpx[m, n:n+oo.k, oo.k-2]) # no noise
 
@@ -443,7 +449,7 @@ class mcmcARspk(mAR.mcmcAR):
 
             #  For oo.u_a, use the values we get from aWeights 
 
-            print psthKnts
+            print(psthKnts)
 
             oo.B = patsy.bs(_N.linspace(0, (oo.t1 - oo.t0)*oo.dt, (oo.t1-oo.t0)), knots=(psthKnts*oo.dt), include_intercept=True)    #  spline basis
 
@@ -474,9 +480,9 @@ class mcmcARspk(mAR.mcmcAR):
         #  this has no direct bearing on sampling of history knots
         #  however, 
         oo = self
-        for m in xrange(oo.TR):
+        for m in range(oo.TR):
             sts = stsM[m]
-            for it in xrange(len(sts)-1):
+            for it in range(len(sts)-1):
                 t0 = sts[it]
                 t1 = sts[it+1]
                 ARo[m, t0+1:t1+1] = hcrv[t0-t0:t1-t0]
@@ -497,15 +503,15 @@ class mcmcARspk(mAR.mcmcAR):
         oo.rts = _N.empty((TR, burn+NMC, ddN+2, R))    #  real components   N = ddN
         oo.zts = _N.empty((TR, burn+NMC, ddN+2, C))    #  imag components 
 
-        for tr in xrange(TR):
-            for it in xrange(1, burn + NMC):
+        for tr in range(TR):
+            for it in range(1, burn + NMC):
                 b, c = dcmpcff(alfa=oo.allalfas[it])
-                print b
-                print c
-                for r in xrange(R):
+                print(b)
+                print(c)
+                for r in range(R):
                     oo.rts[tr, it, :, r] = b[r] * oo.uts[tr, it, r, :]
 
-                for z in xrange(C):
+                for z in range(C):
                     #print "z   %d" % z
                     cf1 = 2*c[2*z].real
                     gam = oo.allalfas[it, R+2*z]
@@ -513,26 +519,6 @@ class mcmcARspk(mAR.mcmcAR):
                     oo.zts[tr, it, 0:ddN+2, z] = cf1*oo.wts[tr, it, z, 1:ddN+3] - cf2*oo.wts[tr, it, z, 0:ddN+2]
 
         oo.zts0 = _N.array(oo.zts[:, :, 1:, 0], dtype=_N.float16)
-
-    def dump(self):
-        oo    = self
-        pcklme = [oo]
-        oo.Bsmpx = None
-        oo.smpx  = None
-        oo.wts   = None
-        oo.uts   = None
-        #oo.lfc   = None
-        oo.rts   = None
-        oo.zts   = None
-
-        dmp = open("mARp.dump", "wb")
-        pickle.dump(pcklme, dmp, -1)
-        dmp.close()
-
-        # import pickle
-        # with open("mARp.dump", "rb") as f:
-        # lm = pickle.load(f)
-
 
     def readdump(self):
         oo    = self
@@ -553,7 +539,7 @@ class mcmcARspk(mAR.mcmcAR):
         usr = us.reshape((40, 1))
 
         Msts = []
-        for m in xrange(TR):
+        for m in range(TR):
             Msts.append(_N.where(y[m] == 1)[0])
 
         oo.stitch_Hist(ARo, smp_hist[:, it], Msts)
@@ -570,7 +556,7 @@ class mcmcARspk(mAR.mcmcAR):
 
         BaS = _N.dot(oo.B.T, alps)
         Msts = []
-        for m in xrange(oo.TR):
+        for m in range(oo.TR):
             Msts.append(_N.where(oo.y[m] == 1)[0])
 
         oo.loghist = _N.zeros(oo.N+1)
@@ -612,10 +598,7 @@ class mcmcARspk(mAR.mcmcAR):
         _plt.hist(oo.amps[startIt:, 0], bins=_N.linspace(_N.min(oo.amps[startIt:, 0]), _N.max(oo.amps[startIt:, 0]), NB), color="black")
         _plt.axvline(x=loA, color="red")
         _plt.axvline(x=hiA, color="red")
-        if dir is None:
-            _plt.savefig(resFN("chosenFsAmps%d" % startIt, dir=oo.setname))
-        else:
-            _plt.savefig(resFN("%(sn)s/chosenFsAmps%(it)d" % {"sn" : dir, "it" : startIt}, dir=oo.setname))
+        _plt.savefig("%(od)s/chosenFsAmps%(sI)d" % {"od" : oo.outdir, "sI" : startIt})
         _plt.close()
 
         indsFs = _N.where((oo.fs[startIt:, 0] >= loF) & (oo.fs[startIt:, 0] <= hiF))
@@ -628,10 +611,7 @@ class mcmcARspk(mAR.mcmcAR):
         #alfas = _N.mean(oo.allalfas[asfsInds], axis=0)
         pcklme = [aus, q, oo.allalfas[asfsInds], aSs, oo.B, hSs, oo.Hbf]
         
-        if dir is None:
-            dmp = open(resFN("posteriorModes%d.pkl" % startIt, dir=oo.setname), "wb")
-        else:
-            dmp = open(resFN("%(sn)s/posteriorModes%(it)d.pkl" % {"sn" : dir, "it" : startIt}, dir=oo.setname), "wb")
+        dmp = open("%(od)s/posteriorModes%(sI)d.pkl" % {"od" : oo.outdir, "sI" : startIt}, "wb")
         pickle.dump(pcklme, dmp, -1)
         dmp.close()
 
@@ -660,10 +640,10 @@ class mcmcARspk(mAR.mcmcAR):
             pcklme["Hbf"]    = oo.Hbf
             pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter]
         if oo.doBsmpx:
-            pcklme["Bsmpx"]    = oo.Bsmpx[:, 0:toiter/oo.BsmpxSkp]
+            pcklme["Bsmpx"]    = oo.Bsmpx[:, 0:toiter//oo.BsmpxSkp]
             
 
-        print "saving state in %s" % oo.outSmplFN
+        print("saving state in %s" % oo.outSmplFN)
         if dir is None:
             dmp = open(oo.outSmplFN, "wb")
         else:

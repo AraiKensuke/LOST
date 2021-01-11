@@ -17,8 +17,8 @@ def stationary_from_Z_bckwd(smps, blksz=200):
     wins         = SMPS/blksz
     wins_m1      = wins - 1
 
-    print wins*blksz
-    print SMPS
+    print(wins*blksz)
+    print(SMPS)
     rshpd     = smps.reshape((3, wins, blksz))
 
     mrshpd    = _N.median(rshpd, axis=2)   #  2 x wins_m1+1 x M  
@@ -56,7 +56,7 @@ def stationary_from_Z_bckwd(smps, blksz=200):
 
         thisWinSame = 0
 
-        for d in xrange(3):
+        for d in range(3):
             bE = bigExc[d]
             if ((zL[d, i] < bE) and (zL[d, i] > -bE)) and \
                ((zNL[d, i] < bE) and (zNL[d, i] > -bE)):

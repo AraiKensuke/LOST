@@ -1,4 +1,4 @@
-import utilities as _U
+#import utilities as _U
 import numpy as _N
 import scipy.stats as _ss
 
@@ -13,7 +13,7 @@ def ampAngRep(z, sp="\n", f_order=False):
     if (type(z) == list) or (type(z) == _N.ndarray):
         L = len(z)
 
-        for l in xrange(L):
+        for l in range(L):
             cStr  = "R"
             zv = z[l]
             r  = _N.abs(zv)
@@ -64,7 +64,7 @@ def initF(nR, nCS, nCN, cohrtSlow=False):
 
     dth   = .1 / nCS
 
-    for n in xrange(nCPr):
+    for n in range(nCPr):
         if n < nCS:
             th = _N.pi*dth * (n+1)
         else:
@@ -95,10 +95,10 @@ def initF(nR, nCS, nCN, ifs=None, ir=0.97):
 
     if (ifs == None):
         ifs  = []
-        for n in xrange(nCS):
+        for n in range(nCS):
             ifs.append(0.03 * (n + 1) * _N.pi)
 
-    for n in xrange(nCPr):
+    for n in range(nCPr):
         if n < nCS:
             th = ifs[n]
             r  = ir
@@ -113,7 +113,7 @@ def initF(nR, nCS, nCN, ifs=None, ir=0.97):
             #r   = 0.8
         iRs[nR + 2*n]     = r*(_N.cos(th) + _N.sin(th)*1j)
         iRs[nR + 2*n + 1] = r*(_N.cos(th) - _N.sin(th)*1j)
-    print iRs
+    print(iRs)
 
     return iRs
 
@@ -132,10 +132,10 @@ def initFL(nR, nCS, nCN, ifs=None):
 
     if (ifs == None):
         ifs  = []
-        for n in xrange(nCS):
+        for n in range(nCS):
             ifs.append(0.03 * (n + 1) * _N.pi)
 
-    for n in xrange(nCPr):
+    for n in range(nCPr):
         if n < nCS:
             th = ifs[n]
             r  = 0.95
@@ -161,7 +161,7 @@ def FfromLims(nR, Cs, Cn, AR2lims):
     iRs[0:nR] = -_N.random.rand(nR)
     #kk = 0.002
     #  50Hz = 0.1    k x Hz    k is 0.002
-    for n in xrange(nCPr):
+    for n in range(nCPr):
         lo = AR2lims[n, 0]
         hi = AR2lims[n, 1]
         if n < Cs:  #  noize
@@ -200,9 +200,9 @@ def dcmpcff(alfa):
                 i -= 1
 
     bbc = _N.empty(p, dtype=_N.complex128)
-    for m in xrange(p):
+    for m in range(p):
         AA[m, m] = 1
-        for j in xrange(p):
+        for j in range(p):
             if j != m:
                 AA[m, m] *= 1 - alfa[j]/alfa[m]
         bbc[m] = 1 / AA[m, m]
@@ -219,41 +219,42 @@ def dcmpcff(alfa):
 
     return b, c
 
-def betterProposal(J, Ji, U):
-    """
-    Move the proposal nearer to 
-    """
-    a          = 0.25*Ji[1, 1]
-    b          = -1.5*Ji[0, 1]
-    c          = 2*Ji[0, 0] + U[0, 0]*Ji[0, 1] + U[1, 0]*Ji[1, 1]
-    d          = -2 * (U[0, 0]*Ji[0, 0] + U[1, 0]*Ji[0, 1])
-    if a != 0:
-        roots      = _U.cubicRoots(a, b, c, d)
-    else:
-        roots      = [(-c + _N.sqrt(c*c - 4*b*d)) / (2*b), \
-                      (-c - _N.sqrt(c*c - 4*b*d)) / (2*b)]
 
-    rM1  = None
-    for r in roots:
-        if (r.imag == 0) and (r >= -2) and (r <= 2):
-            rM1 = r
-    rM2  = -0.25*rM1*rM1
+# def betterProposal(J, Ji, U):
+#     """
+#     Move the proposal nearer to 
+#     """
+#     a          = 0.25*Ji[1, 1]
+#     b          = -1.5*Ji[0, 1]
+#     c          = 2*Ji[0, 0] + U[0, 0]*Ji[0, 1] + U[1, 0]*Ji[1, 1]
+#     d          = -2 * (U[0, 0]*Ji[0, 0] + U[1, 0]*Ji[0, 1])
+#     if a != 0:
+#         roots      = _U.cubicRoots(a, b, c, d)
+#     else:
+#         roots      = [(-c + _N.sqrt(c*c - 4*b*d)) / (2*b), \
+#                       (-c - _N.sqrt(c*c - 4*b*d)) / (2*b)]
 
-    return rM1, rM2
+#     rM1  = None
+#     for r in roots:
+#         if (r.imag == 0) and (r >= -2) and (r <= 2):
+#             rM1 = r
+#     rM2  = -0.25*rM1*rM1
+
+#     return rM1, rM2
 
 def buildLims(Cn, freq_lims, nzLimL=90.):
     Ns   = len(freq_lims)   #  # of signal components
     radians = _N.zeros((Ns + Cn, 2))
     twpi = 2*_N.pi
 
-    for ns in xrange(Ns):
+    for ns in range(Ns):
         wlL = 1000. / freq_lims[ns][0]     #  wavelength of low frequency
         wlH = 1000. / freq_lims[ns][1]
         p1a =  twpi/wlH    # 2pi / lamba
         p1b =  twpi/wlL
 
         radians[ns, 0] = p1a; radians[ns, 1] = p1b
-    for ns in xrange(Cn):
+    for ns in range(Cn):
         wlL = 1000. / nzLimL     #  "noise" from 90Hz
         wlH = 1000. / 500.
         p1a =  twpi/wlH

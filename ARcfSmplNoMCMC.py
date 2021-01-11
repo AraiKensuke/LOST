@@ -1,13 +1,13 @@
 import numpy.polynomial.polynomial as _Npp
 import scipy.stats as _ss
-import kdist as _kd
-import ARlib as _arl
+import LOST.kdist as _kd
+import LOST.ARlib as _arl
 import warnings
 #import logerfc as _lfc
-import commdefs as _cd
+import LOST.commdefs as _cd
 import numpy as _N
 #from ARcfSmplFuncs import ampAngRep, randomF, dcmpcff, betterProposal
-from ARcfSmplFuncs import ampAngRep, dcmpcff, betterProposal
+from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff
 #import ARcfSmplFuncsCy as ac
 import matplotlib.pyplot as _plt
 
@@ -88,7 +88,7 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         ##########  CREATE FILTERED TIMESERIES   ###########
         ##########  Frmj is k x k, smpxW is (N+2) x k ######
 
-        for m in xrange(TR):
+        for m in range(TR):
             _N.dot(smpxW[m], Ff.T, out=wjs[m, c])
             #_N.savetxt("%(2)d-%(1)d" % {"2" : aro, "1" : c}, wjs[m, c])
             #_plt.figure(figsize=(15, 4))
@@ -165,7 +165,7 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
 
     Ff  = _N.zeros((1, k))
     ######     REAL ROOTS.  Directly sample the conditional posterior
-    for j in xrange(R - 1, -1, -1):
+    for j in range(R - 1, -1, -1):
         # given all other roots except the jth
         jth_r = alpR.pop(j)
 
@@ -175,7 +175,7 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         ##########  CREATE FILTERED TIMESERIES   ###########
         ##########  Frmj is k x k, smpxU is (N+1) x k ######
 
-        for m in xrange(TR):
+        for m in range(TR):
             #uj  = _N.dot(Ff, smpxU[m].T).T
             #_N.dot(Ff, smpxU[m].T, out=ujs[m, j])
             _N.dot(smpxU[m], Ff.T, out=ujs[m, j])
@@ -227,7 +227,7 @@ def FilteredTimeseries(N, k, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR):
 
     Ff  = _N.zeros((1, k-1))
 
-    for c in xrange(C-1, -1, -1):
+    for c in range(C-1, -1, -1):
         j = 2*c + 1
 
         # given all other roots except the jth.  This is PHI0
@@ -244,7 +244,7 @@ def FilteredTimeseries(N, k, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR):
         ##########  CREATE FILTERED TIMESERIES   ###########
         ##########  Frmj is k x k, smpxW is (N+2) x k ######
 
-        for m in xrange(TR):
+        for m in range(TR):
             _N.dot(smpxW[m], Ff.T, out=wjs[m, c])
             
         alpC.insert(j-1, jth_r1)
@@ -252,7 +252,7 @@ def FilteredTimeseries(N, k, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR):
 
     Ff  = _N.zeros((1, k))
     ######     REAL ROOTS.  Directly sample the conditional posterior
-    for j in xrange(R - 1, -1, -1):
+    for j in range(R - 1, -1, -1):
         # given all other roots except the jth
         jth_r = alpR.pop(j)
 
@@ -262,7 +262,7 @@ def FilteredTimeseries(N, k, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR):
         ##########  CREATE FILTERED TIMESERIES   ###########
         ##########  Frmj is k x k, smpxU is (N+1) x k ######
 
-        for m in xrange(TR):
+        for m in range(TR):
             _N.dot(smpxU[m], Ff.T, out=ujs[m, j])
 
         alpR.insert(j, jth_r)
@@ -275,16 +275,16 @@ def timeseries_decompose(R, C, allalfas, TR, it, N, ignr, rt, zt, uts, wts):
     uts, wts   filtered time series
     rt, zt     decomposed, additive components
     """
-    for tr in xrange(TR):
+    for tr in range(TR):
         b, c = dcmpcff(alfa=allalfas[it])
         #print("---------------")
         #print b
         #print c
 
-        for r in xrange(R):
+        for r in range(R):
             rt[it, tr, :, r] = b[r] * uts[tr, r, :, 0]
 
-        for z in xrange(C):
+        for z in range(C):
             #print("%dth comp" % z)
             cf1 = 2*c[2*z].real
             gam = allalfas[it, R+2*z]
