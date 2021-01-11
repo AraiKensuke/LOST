@@ -29,7 +29,7 @@ bGenOscUsingAR = True;  bGenOscUsingSines = False;
 f0VAR      = None;     f0         = None;     Bf         = None;     Ba       = None;      amp      = 1;   amp_nz  = 0;
 dSA        = 5;     dSF        = 5;
 
-def create(outfn):
+def create(outdir):
     # _plt.ioff()
     global dt, lambda2, rpsth, isis, us, csTR, etme, bGenOscUsingAR, f0VAR, f0, Bf, Ba, amp, amp_nz, dSA, dSF, psth
     if bGenOscUsingAR:
@@ -55,7 +55,8 @@ def create(outfn):
 
     #  x, prbs, spks    3 columns
     nColumns = 3
-    alldat  = _N.empty((N, TR*nColumns))
+    spkdat  = _N.empty((N, TR))
+    gtdat  = _N.empty((N, TR*2))
     probNOsc  = _N.empty((N, TR))
     spksPT  = _N.empty(TR)
 
@@ -83,14 +84,14 @@ def create(outfn):
 
         spksPT[tr] = _N.sum(dN)
         rpsth.extend(_N.where(dN == 1)[0])
-        alldat[:, nColumns*tr] = _N.sum(x, axis=0).T*etme[tr]*csTR[tr]
-        alldat[:, nColumns*tr+1] = prbs
-        alldat[:, nColumns*tr+2] = dN
+        gtdat[:, 2*tr] = _N.sum(x, axis=0).T*etme[tr]*csTR[tr]
+        gtdat[:, 2*tr+1] = prbs
+        spkdat[:, tr] = dN
         probNOsc[:, tr] = prbsNOsc
         isis.extend(_U.toISI([_N.where(dN == 1)[0].tolist()])[0])
 
 
-    savesetMT(TR, alldat, model, outfn)
+    savesetMT(TR, spkdat, gtdat, model, outdir)
     #savesetMTnosc(TR, probNOsc, setname)
 
     arfs = ""

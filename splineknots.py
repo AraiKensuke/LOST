@@ -138,10 +138,17 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
     """
     spkts  = _U.fromBinDat(bindat, SpkTs=True)
 
+    #  apsth needs to be same size as N.  ie N%bnsz needs to be 0
     h, bs = _N.histogram(spkts, bins=_N.linspace(0, N, (N//bnsz)+1))
-    
+
     fs     = (h / (TR * bnsz * dt))
-    apsth = _N.repeat(fs, bnsz)    #    piecewise boxy approximate PSTH
+    _apsth = _N.repeat(fs, bnsz)    #    piecewise boxy approximate PSTH
+    if N % bnsz != 0:
+        apsth = _N.zeros(N)
+        apsth[0:(N//bnsz)*bnsz] = _apsth
+        apsth[(N//bnsz)*bnsz:]  = apsth[(N//bnsz)*bnsz-1]
+    else:
+        apsth = _apsth
 
     apsth *= dt
 

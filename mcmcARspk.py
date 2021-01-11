@@ -11,7 +11,7 @@ import numpy as _N
 import re as _re
 from LOST.ARcfSmplFuncs import ampAngRep, buildLims, FfromLims, dcmpcff, initF
 import numpy.polynomial.polynomial as _Npp
-from LOST.kflib import createDataAR
+from LOST.kflib import createDataAR, downsamplespkdat
 #
 import LOST.splineknots as _spknts
 import patsy
@@ -115,20 +115,24 @@ class mcmcARspk(mAR.mcmcAR):
         bGetFP = False
 
         x_st_cnts = _N.loadtxt(datfilename)
-        y_ch      = 2   #  spike channel
+        #y_ch      = 2   #  spike channel
+        y_ch      = 0   #  spike channel
         p = _re.compile("^\d{6}")   # starts like "exptDate-....."
         m = p.match(oo.setname)
 
         bRealDat = True
-        dch = 4    #  # of data columns per trial
+        #dch = 4    #  # of data columns per trial
+        dch = 1
 
         if m == None:   #  not real data
-            bRealDat, dch = False, 3
+            #bRealDat, dch = False, 3
+            bRealDat, dch = False, 1
         else:
             flt_ch, ph_ch, bGetFP = 1, 3, True  # Filtered LFP, Hilb Trans
 
         TR = x_st_cnts.shape[1] // dch    #  number of trials will get filtered
 
+        print(TR)
         #  If I only want to use a small portion of the data
         oo.N   = x_st_cnts.shape[0] - 1
         if oo.t1 == None:
@@ -136,11 +140,11 @@ class mcmcARspk(mAR.mcmcAR):
         #  meaning of N changes here
         N   = oo.t1 - 1 - oo.t0
 
-        x   = x_st_cnts[oo.t0:oo.t1, ::dch].T
+        #x   = x_st_cnts[oo.t0:oo.t1, ::dch].T
         y   = x_st_cnts[oo.t0:oo.t1, y_ch::dch].T
-        if bRealDat:
-            fx  = x_st_cnts[oo.t0:oo.t1, flt_ch::dch].T
-            px  = x_st_cnts[oo.t0:oo.t1, ph_ch::dch].T
+        # if bRealDat:
+        #     fx  = x_st_cnts[oo.t0:oo.t1, flt_ch::dch].T
+        #     px  = x_st_cnts[oo.t0:oo.t1, ph_ch::dch].T
 
         ####  Now keep only trials that have spikes
         kpTrl = range(TR)
@@ -156,17 +160,15 @@ class mcmcARspk(mAR.mcmcAR):
                 print("a trial requested to use will be removed %d" % utrl)
 
         ######  oo.y are for trials that have at least 1 spike
-        oo.y     = _N.array(y[oo.useTrials], dtype=_N.int)
-        oo.x     = _N.array(x[oo.useTrials])
-        if bRealDat:
-            oo.fx    = _N.array(fx[oo.useTrials])
-            oo.px    = _N.array(px[oo.useTrials])
+        y     = _N.array(y[oo.useTrials], dtype=_N.int)
+        
+        evry, dsdat = downsamplespkdat(y, 0.01)
 
-        #  INITIAL samples
-        if TR > 1:
-            mnCt= _N.mean(oo.y, axis=1)
-        else:
-            mnCt= _N.array([_N.mean(oo.y)])
+        oo.y     = _N.array(dsdat[oo.useTrials], dtype=_N.int)        
+        #oo.x     = _N.array(x[oo.useTrials])
+        # if bRealDat:
+        #     oo.fx    = _N.array(fx[oo.useTrials])
+        #     oo.px    = _N.array(px[oo.useTrials])
 
         #  remove trials where data has no information
         rmTrl = []
@@ -176,6 +178,10 @@ class mcmcARspk(mAR.mcmcAR):
 
         oo.TR    = len(oo.useTrials)
         oo.N     = N
+        oo.t1 = oo.t0 + dsdat.shape[1]
+        oo.N  = oo.t1 - 1 - oo.t0
+
+
 
         oo.smpx        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k))   #  start at 0 + u
         oo.ws          = _N.empty((oo.TR, oo.N+1), dtype=_N.float)
@@ -634,7 +640,7 @@ class mcmcARspk(mAR.mcmcAR):
             pcklme["Hbf"]    = oo.Hbf
             pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter]
         if oo.doBsmpx:
-            pcklme["Bsmpx"]    = oo.Bsmpx[:, 0:toiter/oo.BsmpxSkp]
+            pcklme["Bsmpx"]    = oo.Bsmpx[:, 0:toiter//oo.BsmpxSkp]
             
 
         print("saving state in %s" % oo.outSmplFN)

@@ -547,22 +547,23 @@ def saveset(name, noparam=False):
         fp.write("absrefr=%d\n" % absrefr)
         fp.close()
 
-def savesetMT(TR, alldat, model, name):
+def savesetMT(TR, spkdat, gtdat, model, outdir):
     #  u, B, singleFreqAR, dt, stNz, x, dN, prbs
-    bfn = "cnt_data"
-    fmt = ""    
+    fmt = ""
+    datfn = "cnt_dat"
     if model != "bernoulli":
-        fmt += "% .2e "
+        #fmt += "% .2e "
         fmt += "%d "
         fmt *= TR
     if model=="bernoulli":
-        bfn = "xprbsdN"
-        fmt += "% .2e "
+        datfn = "spk_dat"
+        #fmt += "% .2e "
         fmt += "%.4e %d "
         fmt *= TR
 
     #_N.savetxt(resFN("%s.dat" % bfn, dir=name, create=True), alldat, fmt=fmt)
-    _N.savetxt(name, alldat, fmt=fmt)
+    _N.savetxt("%(od)s/%(dfn)s.dat" % {"od" : outdir, "dfn" : datfn}, spkdat, fmt=("% d" * TR))
+    _N.savetxt("%(od)s/generative_p.dat" % {"od" : outdir, "dfn" : datfn}, gtdat, fmt=fmt)
 
 def savesetMTnosc(TR, alldat, name):   #  also save PSTH
     #  u, B, singleFreqAR, dt, stNz, x, dN, prbs
@@ -752,3 +753,39 @@ def findMode(dmp, setname, burn, NMC, startIt=None, NB=20, NeighB=1, dir=None):
         dmp = open(resFN("%s/bestParams.pkl" % dir, dir=setname), "wb")
     pickle.dump(pcklme, dmp, -1)
     dmp.close()
+
+
+def downsamplespkdat(dat, isipctl):
+    """
+    look at ISI distribution, and if the shortest ISI is above 1
+    """
+    TR = dat.shape[0]
+
+    isis_list = []
+    for tr in range(TR):
+        spkts = _N.where(dat[tr] == 1)[0]
+        isis_list.extend(_N.diff(spkts))
+
+    isis = _N.array(isis_list)
+
+    maxISI = _N.max(isis)    
+
+    cnts, bins = _N.histogram(isis, bins=_N.linspace(0, maxISI+1, maxISI+2))
+
+    y = _N.cumsum(cnts) / _N.sum(cnts)
+    evry = _N.where((y[0:-1] < isipctl) & (y[1:] >= isipctl))[0][0] + 1
+
+    #  downsample data
+
+    L = dat.shape[1]
+
+    newL = L // evry
+    dnew = _N.array(dat[:, 0:newL * evry])
+
+    dnew_rs = _N.sum(dnew.reshape((TR, newL, evry)), axis=2)
+    
+    x, y = _N.where(dnew_rs > 1)
+
+    dnew_rs[x, y] = 1
+
+    return evry, dnew_rs

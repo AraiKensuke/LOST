@@ -161,7 +161,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
             Msts.append(_N.where(oo.y[m] == 1)[0])
         HcM  = _N.empty((len(vInds), len(vInds)))
 
-        HbfExpd = _N.empty((oo.histknots, ooTR, oo.N+1))
+        HbfExpd = _N.zeros((oo.histknots, ooTR, oo.N+1))
         #  HbfExpd is 11 x M x 1200
         #  find the mean.  For the HISTORY TERM
         for i in range(oo.histknots):
@@ -227,8 +227,12 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     O = kpOws - oo.smpx[..., 2:, 0] - oo.us.reshape((ooTR, 1)) - BaS -  oo.knownSig
 
                     iOf = vInds[0]   #  offset HcM index with RHS index.
+                    #print(oo.ws)
+
                     for i in vInds:
                         for j in vInds:
+                            #print(HbfExpd[i])
+                            #print(HbfExpd[j])
                             HcM[i-iOf, j-iOf] = _N.sum(oo.ws*HbfExpd[i]*HbfExpd[j])
 
                         RHS[i, 0] = _N.sum(oo.ws*HbfExpd[i]*O)
@@ -241,6 +245,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     vm = _N.linalg.solve(HcM, RHS[vInds])
                     Cov = _N.linalg.inv(HcM)
                     #print vm
+                    #print(Cov)
+                    #print(vm[:, 0])
                     cfs = _N.random.multivariate_normal(vm[:, 0], Cov, size=1)
 
                     RHS[vInds,0] = cfs[0]
