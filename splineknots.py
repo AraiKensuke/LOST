@@ -136,6 +136,12 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
     """
     bnsz   binsize used to calculate approximate PSTH
     """
+    rszd = False
+    if N % bnsz != 0:
+        rszd = True
+        pcs = _N.ceil(N/bnsz)
+        bnsz = int(_N.floor(N / pcs))
+
     spkts  = _U.fromBinDat(bindat, SpkTs=True)
 
     #  apsth needs to be same size as N.  ie N%bnsz needs to be 0
@@ -143,7 +149,7 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
 
     fs     = (h / (TR * bnsz * dt))
     _apsth = _N.repeat(fs, bnsz)    #    piecewise boxy approximate PSTH
-    if N % bnsz != 0:
+    if rszd:
         apsth = _N.zeros(N)
         apsth[0:(N//bnsz)*bnsz] = _apsth
         apsth[(N//bnsz)*bnsz:]  = apsth[(N//bnsz)*bnsz-1]
