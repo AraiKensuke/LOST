@@ -110,25 +110,20 @@ class mcmcARspk(mAR.mcmcAR):
         # if (self.noAR is not None) or (self.noAR == False):
         #     self.lfc         = _lfc.logerfc()
 
-    def loadDat(self, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None): #################  loadDat
+    def loadDat(self, runDir, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None): #################  loadDat
         oo = self
         bGetFP = False
 
         x_st_cnts = _N.loadtxt(datfilename)
         #y_ch      = 2   #  spike channel
         y_ch      = 0   #  spike channel
-        p = _re.compile("^\d{6}")   # starts like "exptDate-....."
-        m = p.match(oo.setname)
+        #p = _re.compile("^\d{6}")   # starts like "exptDate-....."
+        #m = p.match(oo.setname)
 
-        bRealDat = True
         #dch = 4    #  # of data columns per trial
         dch = 1
 
-        if m == None:   #  not real data
-            #bRealDat, dch = False, 3
-            bRealDat, dch = False, 1
-        else:
-            flt_ch, ph_ch, bGetFP = 1, 3, True  # Filtered LFP, Hilb Trans
+        bRealDat, dch = False, 1
 
         TR = x_st_cnts.shape[1] // dch    #  number of trials will get filtered
 
@@ -299,10 +294,10 @@ class mcmcARspk(mAR.mcmcAR):
         else:
             print("using saved t0_is_t_since_1st_spk")
 
-        oo.loghist = loadL2(oo.setname, fn=oo.histFN)
+        oo.loghist = loadL2(runDir, fn=oo.histFN)
         oo.dohist = True if oo.loghist is None else False
 
-        oo.knownSig = loadKnown(oo.setname, trials=oo.useTrials, fn=oo.knownSigFN) 
+        oo.knownSig = loadKnown(runDir, trials=oo.useTrials, fn=oo.knownSigFN) 
         if oo.knownSig is None:
             oo.knownSig = _N.zeros((oo.TR, oo.N+1))
         else:

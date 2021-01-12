@@ -493,9 +493,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
     def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False): ###########  RUN
         oo     = self    #  call self oo.  takes up less room on line
-
-        oo.setname = os.getcwd().split("/")[-1]
-
         oo.Cs          = len(oo.freq_lims)
         oo.C           = oo.Cn + oo.Cs
         oo.R           = 1
@@ -505,7 +502,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.s2_x00       = _arl.dcyCovMat(oo.k, _N.ones(oo.k), 0.4)
         oo.restarts = 0
 
-        oo.loadDat(datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5)
+        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5)
         oo.setParams()
 
         print("readSmpls   ")
