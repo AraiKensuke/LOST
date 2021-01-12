@@ -24,8 +24,8 @@ modules = ["kfARlibMPmv_ram2", "kfcomMPmv_ram", "kfARlib1c", "kdist"]
 incdir = [get_python_inc(plat_specific=1), numpy.get_include(), "pyPG/include/RNG"]
 #libdir = ['/usr/local/lib/gcc/8', '/usr/local/lib']
 libdir = ['/usr/local/lib']
-os.environ["CC"]  = "gcc"
-os.environ["CXX"] = "gcc"
+#os.environ["CC"]  = "/usr/local/bin/gcc-6"
+os.environ["CC"]  = "/usr/local/bin/gcc"
 
 ##  Handle OPENMP switch here
 
@@ -57,6 +57,7 @@ for module in modules:
                             ["%s.pyx" % module],
                             #libraries = ['gsl', 'gslcblas'],
                             include_dirs=incdir,   #  include_dirs for Mac
+                            extra_compile_args=extra_compile_args,
                             library_dirs=libdir)
 
     setup(
