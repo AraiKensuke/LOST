@@ -199,11 +199,14 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         
         ######  Gibbs sampling procedure
         for itrB in range(iterBLOCKS):
+            it = itrB*oo.peek
+            if it > 0:
+                print("it: %(it)d    mnStd  %(mnstd).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1]})
+
+
             for it in range(itrB*oo.peek, (itrB+1)*oo.peek):
                 ttt1 = _tm.time()
 
-                if (it % 100) == 0:
-                    print(it)
                 #  generate latent AR state
                 oo.f_x[:, 0]     = oo.x00
                 if it == 0:
@@ -366,7 +369,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                         oo.Bsmpx[:, it // oo.BsmpxSkp, 2:]    = oo.smpx[:, 2:, 0]
                     stds = _N.std(oo.smpx[:, 2+oo.ignr:, 0], axis=1)
                     oo.mnStds[it] = _N.mean(stds, axis=0)
-                    print("mnStd  %.3f" % oo.mnStds[it])
 
                     ttt6 = _tm.time()
                     if not oo.bFixF:   
@@ -441,7 +443,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                 #frms = _mg.stationary_from_Z_bckwd(smps, blksz=oo.peek)
 
-
+                """
                 fig = _plt.figure(figsize=(8, 8))
                 fig.add_subplot(3, 1, 1)
                 _plt.plot(range(1, it), oo.amps[1:it, 0], color="grey", lw=1.5)
@@ -459,11 +461,11 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 _plt.savefig("%(dir)stmp-fsamps%(it)d" % {"dir" : oo.mcmcRunDir, "it" : it+1})
                 fig.subplots_adjust(left=0.15, bottom=0.15, right=0.95, top=0.95)
                 _plt.close()
-
+                """
                 #if it - frms > oo.stationaryDuration:
                 #    break
 
-                oo.dump_smps(0, toiter=(it+1), dir=oo.mcmcRunDir)
+        oo.dump_smps(0, toiter=(oo.ITERS), dir=oo.mcmcRunDir)
         oo.VIS = ARo   #  to examine this from outside
 
 
@@ -491,9 +493,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
     def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False): ###########  RUN
         oo     = self    #  call self oo.  takes up less room on line
-
-        oo.setname = os.getcwd().split("/")[-1]
-
         oo.Cs          = len(oo.freq_lims)
         oo.C           = oo.Cn + oo.Cs
         oo.R           = 1
@@ -503,7 +502,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.s2_x00       = _arl.dcyCovMat(oo.k, _N.ones(oo.k), 0.4)
         oo.restarts = 0
 
-        oo.loadDat(datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5)
+        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5)
         oo.setParams()
 
         print("readSmpls   ")

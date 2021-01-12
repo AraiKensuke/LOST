@@ -1015,3 +1015,15 @@ def to_precision(x,p):
         out.append(m)
 
     return "".join(out)
+
+
+def arr_str(arr, elementfmt="%.4f", elements_per_line=20, strpad="  "):
+    L = arr.shape[0]
+
+    strout = ""
+    for l in range(1, L+1):
+        strout += ("%s, " % elementfmt) % arr[l-1]
+        if l % elements_per_line == 0:
+            strout += "\n%s" % strpad
+        
+    return strout

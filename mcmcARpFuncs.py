@@ -158,9 +158,10 @@ def plot_cmptSpksAndX(N, z, x, y):  #  a component
     _plt.yticks(fontsize=20)
     _plt.grid()
 
-def loadL2(setname, fn=None):
-    if fn is not None:
-        fn = resFN(fn, dir=setname)
+def loadL2(runDir, fn=None):
+    if (fn is not None) and (fn != ""):
+        fn = "%(rd)s/%(fn)s" % {"rd" : runDir, "fn" : fn}
+        print(fn)
         if os.access(fn, os.F_OK):
             print("***  loaded spike history file \"%s\" ***" % fn)
             spkhist = _N.loadtxt(fn)
@@ -187,17 +188,18 @@ def runNotes(setname, ID_q2, TR0, TR1):
     #  ID_q2
     #  Trials using
 
-def loadKnown(setname, trials=None, fn="known.dat"):
-    fn = resFN(fn, dir=setname)
-    if os.access(fn, os.F_OK):
-        print("***  loaded known signal \"%s\" ***" % fn)
-        a = _N.loadtxt(fn)
-        if trials is None:
-            return a.T
-        else:
-            return a.T[trials]
-    print("!!!  NO known signal loaded !!!")
-    if fn is not None:
-        print("!!!  Couldn't find \"%s\" !!!" % fn)
-        
+def loadKnown(runDir, trials=None, fn="known.dat"):
+    if (fn is not None) and (fn != ""):
+        fn = "%(rd)s/%(fn)s" % {"rd" : runDir, "fn" : fn}
+        if os.access(fn, os.F_OK):
+            print("***  loaded known signal \"%s\" ***" % fn)
+            a = _N.loadtxt(fn)
+            if trials is None:
+                return a.T
+            else:
+                return a.T[trials]
+        print("!!!  NO known signal loaded !!!")
+        if fn is not None:
+            print("!!!  Couldn't find \"%s\" !!!" % fn)
+
     return None
