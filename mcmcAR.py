@@ -40,6 +40,9 @@ class mcmcAR:
     x00           = None
     V00           = None
 
+    mg_blocksize  = 200
+    mg_points     = 20
+
     N     = None;    #  # of data for each trial
     Ns    = None;    #  # of data for each trial
     TR    = None;    #  # of trials
@@ -65,19 +68,20 @@ class mcmcAR:
     dN    = None
 
     f_x           = None
-
+    last_iter     = -1
 
     ##### PRIORS
     #  q2  --  Inverse Gamma prior
     #a_q2         = 1e-1;          B_q2         = 1e-6
     #a_q2         = 1e-1;          B_q2         = 1e-11
     ##  B / (a+1)
-    a_q2         = 1.01;          B_q2         = 1e-5
+    a_q2         = None;          B_q2         = None
     #a_q2         = 50;          B_q2         = 1e-12
     #  initial states
     u_x00        = None;          s2_x00       = None
     #  u   --  Gaussian prior
-    u_u          = -3;             s2_u         = 2.5
+    #u_u          = -3;             s2_u         = 2.5
+    u_u          = None;             s2_u         = 1e-4
     #  initial states
     u_x00        = None;          s2_x00       = None
 

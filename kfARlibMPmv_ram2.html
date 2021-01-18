@@ -375,7 +375,7 @@ body.cython { font-family: courier; font-size: 12; }
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_d, __pyx_n_s_test, __pyx_t_1) &lt; 0) <span class='error_goto'>__PYX_ERR(0, 1, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">002</span>: <span class="k">cimport</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">_N</span></pre>
-<pre class="cython line score-0">&#xA0;<span class="">003</span>: <span class="k">from</span> <span class="nn">cython.parallel</span> <span class="k">import</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">prange</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">003</span>: <span class="c">#from cython.parallel import parallel, prange</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">004</span>: <span class="c">#import kfcomMPmv_ram as _kfcom</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">005</span>: <span class="c">#import ram as _kfcom</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">006</span>: <span class="c">#import kfcomMPmv_ram as _kfcom</span></pre>
@@ -971,7 +971,7 @@ static PyObject *__pyx_pf_16kfARlibMPmv_ram2_2armdl_FFBS_1itrMP(CYTHON_UNUSED Py
 <pre class="cython line score-0">&#xA0;<span class="">070</span>:     <span class="k">cdef</span> <span class="kt">long</span> <span class="nf">tr</span><span class="p">,</span> <span class="nf">i</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">071</span>: </pre>
 <pre class="cython line score-0">&#xA0;<span class="">072</span>:     <span class="c">#ttt2 = _tm.time()</span></pre>
-<pre class="cython line score-4" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">073</span>:     <span class="k">with</span> <span class="k">nogil</span><span class="p">,</span> <span class="n">parallel</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mf">2</span><span class="p">):</span></pre>
+<pre class="cython line score-4" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">073</span>:     <span class="k">with</span> <span class="k">nogil</span><span class="p">:</span></pre>
 <pre class='cython code score-4 '>  {
       #ifdef WITH_THREAD
       PyThreadState *_save;
@@ -979,17 +979,6 @@ static PyObject *__pyx_pf_16kfARlibMPmv_ram2_2armdl_FFBS_1itrMP(CYTHON_UNUSED Py
       <span class='pyx_c_api'>__Pyx_FastGIL_Remember</span>();
       #endif
       /*try:*/ {
-        {
-            #if ((defined(__APPLE__) || defined(__OSX__)) &amp;&amp; (defined(__GNUC__) &amp;&amp; (__GNUC__ &gt; 2 || (__GNUC__ == 2 &amp;&amp; (__GNUC_MINOR__ &gt; 95)))))
-                #undef likely
-                #undef unlikely
-                #define likely(x)   (x)
-                #define unlikely(x) (x)
-            #endif
-            #ifdef _OPENMP
-            #pragma omp parallel  num_threads(2)
-            #endif /* _OPENMP */
-            {
 /* … */
       /*finally:*/ {
         /*normal exit:*/{
@@ -1002,33 +991,14 @@ static PyObject *__pyx_pf_16kfARlibMPmv_ram2_2armdl_FFBS_1itrMP(CYTHON_UNUSED Py
         __pyx_L5:;
       }
   }
-</pre><pre class="cython line score-0" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">074</span>:         <span class="k">for</span> <span class="n">tr</span> <span class="ow">in</span> <span class="n">prange</span><span class="p">(</span><span class="n">_TR</span><span class="p">):</span></pre>
-<pre class='cython code score-0 '>                __pyx_t_45 = __pyx_v_16kfARlibMPmv_ram2__TR;
-                if (1 == 0) abort();
-                {
-                    __pyx_t_47 = (__pyx_t_45 - 0 + 1 - 1/abs(1)) / 1;
-                    if (__pyx_t_47 &gt; 0)
-                    {
-                        #ifdef _OPENMP
-                        #pragma omp for firstprivate(__pyx_v_tr) lastprivate(__pyx_v_tr)
-                        #endif /* _OPENMP */
-                        for (__pyx_t_46 = 0; __pyx_t_46 &lt; __pyx_t_47; __pyx_t_46++){
-                            {
-                                __pyx_v_tr = (long)(0 + 1 * __pyx_t_46);
+</pre><pre class="cython line score-0" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">074</span>:         <span class="k">for</span> <span class="n">tr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">_TR</span><span class="p">):</span></pre>
+<pre class='cython code score-0 '>        __pyx_t_45 = __pyx_v_16kfARlibMPmv_ram2__TR;
+        __pyx_t_46 = __pyx_t_45;
+        for (__pyx_t_47 = 0; __pyx_t_47 &lt; __pyx_t_46; __pyx_t_47+=1) {
+          __pyx_v_tr = __pyx_t_47;
 </pre><pre class="cython line score-0" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">075</span>:             <span class="n">FFdv_new</span><span class="p">(</span><span class="o">&amp;</span><span class="n">p_gau_obs</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_gau_var</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_F</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_k</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="n">p_q2</span><span class="p">[</span><span class="n">tr</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_fx</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_fV</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_px</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_pV</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_K</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="p">])</span></pre>
-<pre class='cython code score-0 '>                                __pyx_f_16kfARlibMPmv_ram2_FFdv_new((&amp;(__pyx_v_p_gau_obs[(__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1)])), (&amp;(__pyx_v_p_gau_var[(__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1)])), (&amp;(__pyx_v_p_F[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (__pyx_v_p_q2[__pyx_v_tr]), (&amp;(__pyx_v_p_fx[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_fV[(((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_px[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_pV[(((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_K[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])));
-                            }
-                        }
-                    }
-                }
-            }
+<pre class='cython code score-0 '>          __pyx_f_16kfARlibMPmv_ram2_FFdv_new((&amp;(__pyx_v_p_gau_obs[(__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1)])), (&amp;(__pyx_v_p_gau_var[(__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1)])), (&amp;(__pyx_v_p_F[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (__pyx_v_p_q2[__pyx_v_tr]), (&amp;(__pyx_v_p_fx[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_fV[(((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_px[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_pV[(((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_K[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])));
         }
-        #if ((defined(__APPLE__) || defined(__OSX__)) &amp;&amp; (defined(__GNUC__) &amp;&amp; (__GNUC__ &gt; 2 || (__GNUC__ == 2 &amp;&amp; (__GNUC_MINOR__ &gt; 95)))))
-            #undef likely
-            #undef unlikely
-            #define likely(x)   __builtin_expect(!!(x), 1)
-            #define unlikely(x) __builtin_expect(!!(x), 0)
-        #endif
       }
 </pre><pre class="cython line score-0">&#xA0;<span class="">076</span>:             <span class="c"># ##########  BS</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">077</span>:     <span class="c">#ttt3 = _tm.time()</span></pre>
@@ -1300,7 +1270,7 @@ __pyx_t_34 = __pyx_memoryview_fromslice(__pyx_t_40, 2, (PyObject *(*)(char *)) _
   <span class='refnanny'>__Pyx_GIVEREF</span>(__pyx_slice_);
 </pre><pre class="cython line score-0">&#xA0;<span class="">093</span>:     <span class="c">#ttt6 = _tm.time()</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">094</span>: </pre>
-<pre class="cython line score-4" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">095</span>:     <span class="k">with</span> <span class="k">nogil</span><span class="p">,</span> <span class="n">parallel</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mf">2</span><span class="p">):</span></pre>
+<pre class="cython line score-4" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">095</span>:     <span class="k">with</span> <span class="k">nogil</span><span class="p">:</span></pre>
 <pre class='cython code score-4 '>  {
       #ifdef WITH_THREAD
       PyThreadState *_save;
@@ -1308,17 +1278,6 @@ __pyx_t_34 = __pyx_memoryview_fromslice(__pyx_t_40, 2, (PyObject *(*)(char *)) _
       <span class='pyx_c_api'>__Pyx_FastGIL_Remember</span>();
       #endif
       /*try:*/ {
-        {
-            #if ((defined(__APPLE__) || defined(__OSX__)) &amp;&amp; (defined(__GNUC__) &amp;&amp; (__GNUC__ &gt; 2 || (__GNUC__ == 2 &amp;&amp; (__GNUC_MINOR__ &gt; 95)))))
-                #undef likely
-                #undef unlikely
-                #define likely(x)   (x)
-                #define unlikely(x) (x)
-            #endif
-            #ifdef _OPENMP
-            #pragma omp parallel  num_threads(2)
-            #endif /* _OPENMP */
-            {
 /* … */
       /*finally:*/ {
         /*normal exit:*/{
@@ -1326,38 +1285,19 @@ __pyx_t_34 = __pyx_memoryview_fromslice(__pyx_t_40, 2, (PyObject *(*)(char *)) _
           <span class='pyx_c_api'>__Pyx_FastGIL_Forget</span>();
           Py_BLOCK_THREADS
           #endif
-          goto __pyx_L20;
+          goto __pyx_L10;
         }
-        __pyx_L20:;
+        __pyx_L10:;
       }
   }
-</pre><pre class="cython line score-0" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">096</span>:         <span class="k">for</span> <span class="n">tr</span> <span class="ow">in</span> <span class="n">prange</span><span class="p">(</span><span class="n">_TR</span><span class="p">):</span></pre>
-<pre class='cython code score-0 '>                __pyx_t_47 = __pyx_v_16kfARlibMPmv_ram2__TR;
-                if (1 == 0) abort();
-                {
-                    __pyx_t_45 = (__pyx_t_47 - 0 + 1 - 1/abs(1)) / 1;
-                    if (__pyx_t_45 &gt; 0)
-                    {
-                        #ifdef _OPENMP
-                        #pragma omp for firstprivate(__pyx_v_tr) lastprivate(__pyx_v_tr)
-                        #endif /* _OPENMP */
-                        for (__pyx_t_46 = 0; __pyx_t_46 &lt; __pyx_t_45; __pyx_t_46++){
-                            {
-                                __pyx_v_tr = (long)(0 + 1 * __pyx_t_46);
+</pre><pre class="cython line score-0" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">096</span>:         <span class="k">for</span> <span class="n">tr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">_TR</span><span class="p">):</span></pre>
+<pre class='cython code score-0 '>        __pyx_t_45 = __pyx_v_16kfARlibMPmv_ram2__TR;
+        __pyx_t_46 = __pyx_t_45;
+        for (__pyx_t_47 = 0; __pyx_t_47 &lt; __pyx_t_46; __pyx_t_47+=1) {
+          __pyx_v_tr = __pyx_t_47;
 </pre><pre class="cython line score-0" onclick="(function(s){s.display=s.display==='block'?'none':'block'})(this.nextElementSibling.style)">+<span class="">097</span>:             <span class="n">BSvec</span><span class="p">(</span><span class="o">&amp;</span><span class="n">p_iF</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_k</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_ifV</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="n">p_q2</span><span class="p">[</span><span class="n">tr</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_fx</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_fV</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_smpx</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="o">*</span><span class="n">_k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_sx_nz_vars</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">p_sx_norms</span><span class="p">[</span><span class="n">tr</span><span class="o">*</span><span class="n">_Np1</span><span class="p">])</span></pre>
-<pre class='cython code score-0 '>                                __pyx_f_16kfARlibMPmv_ram2_BSvec((&amp;(__pyx_v_p_iF[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_ifV[(((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (__pyx_v_p_q2[__pyx_v_tr]), (&amp;(__pyx_v_p_fx[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_fV[(((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_smpx[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_sx_nz_vars[(__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1)])), (&amp;(__pyx_v_p_sx_norms[(__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1)])));
-                            }
-                        }
-                    }
-                }
-            }
+<pre class='cython code score-0 '>          __pyx_f_16kfARlibMPmv_ram2_BSvec((&amp;(__pyx_v_p_iF[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_ifV[(((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (__pyx_v_p_q2[__pyx_v_tr]), (&amp;(__pyx_v_p_fx[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_fV[(((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_smpx[((__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1) * __pyx_v_16kfARlibMPmv_ram2__k)])), (&amp;(__pyx_v_p_sx_nz_vars[(__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1)])), (&amp;(__pyx_v_p_sx_norms[(__pyx_v_tr * __pyx_v_16kfARlibMPmv_ram2__Np1)])));
         }
-        #if ((defined(__APPLE__) || defined(__OSX__)) &amp;&amp; (defined(__GNUC__) &amp;&amp; (__GNUC__ &gt; 2 || (__GNUC__ == 2 &amp;&amp; (__GNUC_MINOR__ &gt; 95)))))
-            #undef likely
-            #undef unlikely
-            #define likely(x)   __builtin_expect(!!(x), 1)
-            #define unlikely(x) __builtin_expect(!!(x), 0)
-        #endif
       }
 </pre><pre class="cython line score-0">&#xA0;<span class="">098</span>: </pre>
 <pre class="cython line score-0">&#xA0;<span class="">099</span>:     <span class="c">#ttt7 = _tm.time()</span></pre>

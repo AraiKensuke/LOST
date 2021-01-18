@@ -156,10 +156,34 @@ class mcmcARspk(mAR.mcmcAR):
 
         ######  oo.y are for trials that have at least 1 spike
         y     = _N.array(y[oo.useTrials], dtype=_N.int)
-        
-        evry, dsdat = downsamplespkdat(y, 0.01)
+
+        if oo.downsamp:
+            evry, dsdat = downsamplespkdat(y, 0.01)
+        else:
+            evry = 1
+            dsdat = y
+            print("NO downsamp")
+        oo.evry     = evry
+        oo.dt *= oo.evry
+
+        print("evry    %d" % evry)
 
         oo.y     = _N.array(dsdat[oo.useTrials], dtype=_N.int)        
+
+        prb_spk_in_bin = _N.sum(oo.y) / (oo.y.shape[0] * oo.y.shape[1])
+        oo.u_u   = -_N.log(1/prb_spk_in_bin - 1)
+        print(oo.u_u)
+        
+
+        num_dat_pts = oo.y.shape[0] * oo.y.shape[1]
+        if (oo.a_q2 is None) or (oo.B_q2 is None):
+            #  we set a prior here
+            #oo.a_q2 = num_dat_pts // 10
+            oo.a_q2 = num_dat_pts // 10
+            #md = B / (a+1)   B = md
+            oo.B_q2 = 1e-4 * (oo.a_q2 + 1) * evry
+            print("setting prior for innovation %(a)d  %(B).3e" % {"a" : oo.a_q2, "B" : oo.B_q2})
+
         #oo.x     = _N.array(x[oo.useTrials])
         # if bRealDat:
         #     oo.fx    = _N.array(fx[oo.useTrials])
@@ -175,8 +199,6 @@ class mcmcARspk(mAR.mcmcAR):
         oo.N     = N
         oo.t1 = oo.t0 + dsdat.shape[1]
         oo.N  = oo.t1 - 1 - oo.t0
-
-
 
         oo.smpx        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k))   #  start at 0 + u
         oo.ws          = _N.empty((oo.TR, oo.N+1), dtype=_N.float)
@@ -311,6 +333,7 @@ class mcmcARspk(mAR.mcmcAR):
         ####  initialize
         if Bsmpx:
             oo.Bsmpx        = _N.zeros((oo.TR, iters//oo.BsmpxSkp, (oo.N+1) + 2))
+            #oo.Bsmpx        = _N.zeros((iters//oo.BsmpxSkp, oo.TR, (oo.N+1) + 2))
         oo.smp_u        = _N.zeros((oo.TR, iters))
         oo.smp_hS        = _N.zeros((oo.histknots, iters))   # history spline
         oo.smp_hist        = _N.zeros((oo.N+1, iters))   # history spline
@@ -526,28 +549,40 @@ class mcmcARspk(mAR.mcmcAR):
         oo.aS  = lm[0].aS
         oo.us  = lm[0].us
 
+
+    #def CIF(self, us=None, alps=None, hS=None, osc=None, smplInd0=None, smplInd1=None):
+
     """
-    def CIF(TR, N, us, B, alps, osc, it):
-        ARo   = _N.empty((TR, N+1))
-
-        BaS = _N.dot(B.T, alps).reshape((1, 1200))
-        usr = us.reshape((40, 1))
-
-        Msts = []
-        for m in range(TR):
-            Msts.append(_N.where(y[m] == 1)[0])
-
-        oo.stitch_Hist(ARo, smp_hist[:, it], Msts)
-
-        usr + ARo 
-        cif = _N.exp(usr + ARo + osc + BaS) / (1 + _N.exp(usr + ARo + osc + BaS))
-
-        return cif
+        pcklme["B"]    = oo.B
+        pcklme["q2"]   = oo.smp_q2[:, 0:toiter]
+        pcklme["amps"] = oo.amps[0:toiter]
+        pcklme["fs"]   = oo.fs[0:toiter]
+        pcklme["u"]    = oo.smp_u[:, 0:toiter]
+        pcklme["mnStds"]= oo.mnStds[0:toiter]
+        pcklme["allalfas"]= oo.allalfas[0:toiter]
+        pcklme["smpx"] = oo.smpx
+        pcklme["ws"]   = oo.ws
+        pcklme["t0_is_t_since_1st_spk"] = oo.t0_is_t_since_1st_spk
+        if oo.Hbf is not None:
+            pcklme["spkhist"] = oo.smp_hist[:, 0:toiter]
+            pcklme["Hbf"]    = oo.Hbf
+            pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter]
     """
-
-    def CIF(self, us, B, alps, hS, osc):
+    def CIF(self, gibbsIter=0):
+        """
+        us     offset                     TR x 1
+        alps   psth spline weights        
+        hS     history spline weights
+        osc                               TR x Nm1
+        """
         oo = self
+        usr  = oo.smp_u[:, gibbsIter].reshape((oo.TR, 1))
+        alps = oo.smp_aS[gibbsIter]  #  this is last
+        hS   = oo.smp_hS[:, gibbsIter]  #  this is last
+        osc  = oo.Bsmpx[:, gibbsIter//oo.BsmpxSkp, 2:]
+
         ARo   = _N.empty((oo.TR, oo.N+1))
+
 
         BaS = _N.dot(oo.B.T, alps)
         Msts = []
@@ -559,7 +594,7 @@ class mcmcARspk(mAR.mcmcAR):
 
         oo.stitch_Hist(ARo, oo.loghist, Msts)
 
-        cif = _N.exp(us + ARo + osc + BaS + oo.knownSig) / (1 + _N.exp(us + ARo + osc + BaS + oo.knownSig))
+        cif = _N.exp(usr + ARo + osc + BaS + oo.knownSig) / (1 + _N.exp(usr + ARo + osc + BaS + oo.knownSig))
 
         return cif
 
@@ -616,10 +651,11 @@ class mcmcARspk(mAR.mcmcAR):
         if pcklme is None:
             pcklme = {}
 
-        toiter         = oo.NMC + oo.burn if (toiter is None) else toiter
+        toiter         = oo.last_iter if (toiter is None) else toiter
         if oo.bpsth:
             pcklme["aS"]   = oo.smp_aS[0:toiter]  #  this is last
         pcklme["frm"]    = frm
+        pcklme["evry"]    = oo.evry
         pcklme["B"]    = oo.B
         pcklme["q2"]   = oo.smp_q2[:, 0:toiter]
         pcklme["amps"] = oo.amps[0:toiter]
@@ -635,7 +671,11 @@ class mcmcARspk(mAR.mcmcAR):
             pcklme["Hbf"]    = oo.Hbf
             pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter]
         if oo.doBsmpx:
-            pcklme["Bsmpx"]    = oo.Bsmpx[:, 0:toiter//oo.BsmpxSkp]
+            pcklme["Bsmpx"]    = oo.Bsmpx[0:toiter//oo.BsmpxSkp]
+
+        #cifs = _N.empty((oo.TR, oo.N
+        #for it 
+        #oo.CIF(us, alps, hS, osc
             
 
         print("saving state in %s" % oo.outSmplFN)

@@ -1,6 +1,6 @@
 import numpy as _N
 cimport numpy as _N
-from cython.parallel import parallel, prange
+#from cython.parallel import parallel, prange
 #import kfcomMPmv_ram as _kfcom
 #import ram as _kfcom
 #import kfcomMPmv_ram as _kfcom
@@ -70,8 +70,8 @@ def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, 
     cdef long tr, i
 
     #ttt2 = _tm.time()
-    with nogil, parallel(num_threads=2):
-        for tr in prange(_TR):
+    with nogil:
+        for tr in range(_TR):
             FFdv_new(&p_gau_obs[tr*_Np1], &p_gau_var[tr*_Np1], &p_F[tr*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_px[tr*_Np1*_k], &p_pV[tr*_Np1*_k*_k], &p_K[tr*_Np1*_k])
             # ##########  BS
     #ttt3 = _tm.time()
@@ -92,8 +92,8 @@ def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, 
     smpx[:, __N] = smXN   #  not as a memview
     #ttt6 = _tm.time()
 
-    with nogil, parallel(num_threads=2):
-        for tr in prange(_TR):
+    with nogil:
+        for tr in range(_TR):
             BSvec(&p_iF[tr*_k*_k], &p_ifV[tr*_Np1*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_smpx[tr*_Np1*_k], &p_sx_nz_vars[tr*_Np1], &p_sx_norms[tr*_Np1])
 
     #ttt7 = _tm.time()

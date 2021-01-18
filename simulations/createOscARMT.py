@@ -80,18 +80,17 @@ def create(outdir):
         else:
             xosc = createFlucOsc(f0, _N.array([f0VAR[tr]]), N, dt, 1, Bf=Bf, Ba=Ba, amp=amp, amp_nz=amp_nz, stdf=stdf, stda=stda, sig=sig, smoothKer=5, dSA=dSA, dSF=dSF) * etme[tr]  # sig is arbitrary, but we need to keep it same as when stdf, stda measured
             #x, dN, prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, None, psth + us[tr], None, lambda2=lambda2, p=1, nRhythms=1, cs=csTR[tr], etme=etme[tr], x=xosc[0])
-            x, dN, prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, None, us[tr], None, lambda2=lambda2, p=1, nRhythms=1, cs=csTR[tr], etme=etme[tr], x=xosc, offset=psth)
+            x, dN, prbs, prbsWithHist, fs, prbsNOsc = createDataPPl2(TR, N, dt, None, us[tr], None, lambda2=lambda2, p=1, nRhythms=1, cs=csTR[tr], etme=etme[tr], x=xosc, offset=psth)
 
         spksPT[tr] = _N.sum(dN)
         rpsth.extend(_N.where(dN == 1)[0])
-        gtdat[:, 2*tr] = _N.sum(x, axis=0).T*etme[tr]*csTR[tr]
-        gtdat[:, 2*tr+1] = prbs
+        gtdat[:, 2*tr] = prbs#_N.sum(x, axis=0).T*etme[tr]*csTR[tr]
+        gtdat[:, 2*tr+1] = prbsWithHist
         spkdat[:, tr] = dN
         probNOsc[:, tr] = prbsNOsc
         isis.extend(_U.toISI([_N.where(dN == 1)[0].tolist()])[0])
 
-
-    savesetMT(TR, spkdat, gtdat, model, outdir)
+    savesetMT(TR, spkdat, gtdat, model, lambda2, psth, outdir)
     #savesetMTnosc(TR, probNOsc, setname)
 
     arfs = ""

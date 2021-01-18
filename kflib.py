@@ -4,6 +4,7 @@ from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff#betterProposal
 import matplotlib.pyplot as _plt
 from LOST.filter import gauKer
 import scipy.stats as _ss
+import pickle
 
 def createFlucOsc(f0, f0VAR, N, dt0, TR, Bf=[0.99], Ba=[0.99], amp=1, amp_nz=0, stdf=None, stda=None, sig=0.1, smoothKer=0, dSF=5, dSA=5):
     """
@@ -285,7 +286,7 @@ def createDataPP(N, B, beta, u, stNz, p=1, trim=0, x=None, absrefr=0):
 
     return x[trim:N], spks[trim:N], prbs[trim:N], fs[trim:N]
 
-def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
+def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2=None, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
     """
     B:  AR coefficeints
     stNz   innovation variance.  stNz == 0.  flat state.
@@ -332,6 +333,7 @@ def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2, nRhythms=1, p=1, x=None,
         
     spks = _N.zeros(N)
     prbs = _N.zeros(N)
+    prbsWithHist = _N.zeros(N)
     prbsNOsc = _N.zeros(N)   #  no osc.
     fs   = _N.zeros(N)
 
@@ -354,15 +356,15 @@ def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2, nRhythms=1, p=1, x=None,
 
         lmd = 1 if i - ht >= lh else lambda2[i - ht]
         
-        prbs[i] *= lmd
+        prbsWithHist[i] = prbs[i] * lmd
         
         prbsNOsc[i] *= lmd
-        spks[i] = _N.random.binomial(1, prbs[i])
+        spks[i] = _N.random.binomial(1, prbsWithHist[i])
         if spks[i] == 1:
             ht = i+1    #  lambda2[0] is history 1 bin after spike
 
-    fs[:] = prbs / dt
-    return xc[:, buf:], spks, prbs, fs, prbsNOsc
+    fs[:] = prbsWithHist / dt
+    return xc[:, buf:], spks, prbs, prbsWithHist, fs, prbsNOsc
 
 """
 def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
@@ -497,7 +499,7 @@ def createDataPPl2Simp(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, 
     for i in range(N):
         e = _N.exp(u[i] + cs * x[i+buf]) * dt
         prbs[i]  = (p*e) / (1 + e)
-
+        prbsWithHist[i] = prbs[i]*lambda2[i-ls-1]
         try:
             spks[i] = _N.random.binomial(1, prbs[i]*lambda2[i-ls-1])
         except IndexError:
@@ -506,7 +508,7 @@ def createDataPPl2Simp(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, 
             ls = i
 
     fs[:] = prbs / dt
-    return xc[:, buf:], spks, prbs, fs
+    return xc[:, buf:], spks, prbs, prbsWithHist, fs
 
 #def plottableSpkTms(dN, ymin, ymax):
 def plottableSpkTms(dN, y):
@@ -547,23 +549,27 @@ def saveset(name, noparam=False):
         fp.write("absrefr=%d\n" % absrefr)
         fp.close()
 
-def savesetMT(TR, spkdat, gtdat, model, outdir):
+def savesetMT(TR, spkdat, gtdat, model, lambda2, psth, outdir):
     #  u, B, singleFreqAR, dt, stNz, x, dN, prbs
     fmt = ""
-    datfn = "cnt_dat"
+    fmtgt = ""
+    datfn = "spk_dat"
     if model != "bernoulli":
         #fmt += "% .2e "
         fmt += "%d "
         fmt *= TR
-    if model=="bernoulli":
-        datfn = "spk_dat"
-        #fmt += "% .2e "
-        fmt += "%.4e %d "
-        fmt *= TR
 
-    #_N.savetxt(resFN("%s.dat" % bfn, dir=name, create=True), alldat, fmt=fmt)
     _N.savetxt("%(od)s/%(dfn)s.dat" % {"od" : outdir, "dfn" : datfn}, spkdat, fmt=("% d" * TR))
-    _N.savetxt("%(od)s/generative_p.dat" % {"od" : outdir, "dfn" : datfn}, gtdat, fmt=fmt)
+    pcklme = {}
+    pcklme["gtdatWOhist"] = gtdat[:, ::2]
+    pcklme["gtdatWhist"]  = gtdat[:, 1::2]
+    pcklme["spkdat"]      = spkdat
+    pcklme["psth"]        = psth
+    pcklme["lambda2"]     = lambda2
+    dmp = open("%(od)s/generative.pkl" % {"od" : outdir}, "wb")
+    pickle.dump(pcklme, dmp, -1)
+    dmp.close()
+
 
 def savesetMTnosc(TR, alldat, name):   #  also save PSTH
     #  u, B, singleFreqAR, dt, stNz, x, dN, prbs

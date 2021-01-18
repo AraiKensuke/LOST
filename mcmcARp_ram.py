@@ -203,9 +203,9 @@ class mcmcARp(mcmcARspk.mcmcARspk):
             if it > 0:
                 print("it: %(it)d    mnStd  %(mnstd).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1]})
 
-
+            #tttA = _tm.time()
             for it in range(itrB*oo.peek, (itrB+1)*oo.peek):
-                ttt1 = _tm.time()
+                #ttt1 = _tm.time()
 
                 #  generate latent AR state
                 oo.f_x[:, 0]     = oo.x00
@@ -216,11 +216,11 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.f_V[:, 0]     = _N.mean(oo.f_V[:, 1:], axis=1)
 
                 ###  PG latent variable sample
-                ttt2 = _tm.time()
+                #ttt2 = _tm.time()
 
                 for m in range(ooTR):
                     lw.rpg_devroye(oo.rn, oo.smpx[m, 2:, 0] + oo.us[m] + BaS + ARo[m] + oo.knownSig[m], out=oo.ws[m])  ######  devryoe
-                ttt3 = _tm.time()
+                #ttt3 = _tm.time()
 
                 if ooTR == 1:
                     oo.ws   = oo.ws.reshape(1, ooN+1)
@@ -273,7 +273,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                 # oo.gau_obs = kpOws - BaS - ARo - oous_rs - oo.knownSig
                 # oo.gau_var =1 / oo.ws   #  time dependent noise
-
+                #ttt4 = _tm.time()
                 if oo.bpsth:
                     Oms  = kpOws - oo.smpx[..., 2:, 0] - ARo - oous_rs - oo.knownSig
                     _N.einsum("mn,mn->n", oo.ws, Oms, out=smWimOm)   #  sum over
@@ -283,9 +283,9 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     lm_f  = _N.dot(lv_f, smWimOm)  #  nondiag of 1./Bi are inf
                     #  now sample
                     iVAR = _N.dot(oo.B, _N.dot(ilv_f, oo.B.T)) + iD_f
-                    t4a = _tm.time()
+                    #ttt4a = _tm.time()
                     VAR  = _N.linalg.inv(iVAR)  #  knots x knots
-                    t4b = _tm.time()
+                    #ttt4b = _tm.time()
                     #iBDBW = _N.linalg.inv(BDB + lv_f)   # BDB not diag
                     #Mn    = oo.u_a + _N.dot(DB, _N.dot(iBDBW, lm_f - BTua))
 
@@ -293,13 +293,13 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     #  lm_f - BTua    (N+1)
                     Mn = oo.u_a + _N.dot(DB, _N.linalg.solve(BDB + lv_f, lm_f - BTua))
 
-                    t4c = _tm.time()
+                    #t4c = _tm.time()
 
                     oo.aS   = _N.random.multivariate_normal(Mn, VAR, size=1)[0, :]
                     oo.smp_aS[it, :] = oo.aS
                     _N.dot(oo.B.T, oo.aS, out=BaS)
 
-                ttt4 = _tm.time()
+                #ttt5 = _tm.time()
                 ########     per trial offset sample  burns==None, only psth fit
                 Ons  = kpOws - oo.smpx[..., 2:, 0] - ARo - BaS - oo.knownSig
 
@@ -351,7 +351,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 #     oo.us[:] = _N.mean(oo.us)
                 # oo.smp_u[:, it] = oo.us
 
-                ttt5 = _tm.time()
+                #ttt6 = _tm.time()
                 if not oo.noAR:
                 #  _d.F, _d.N, _d.ks, 
                     #_kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, oo.smpx, K)
@@ -367,10 +367,11 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                     if oo.doBsmpx and (it % oo.BsmpxSkp == 0):
                         oo.Bsmpx[:, it // oo.BsmpxSkp, 2:]    = oo.smpx[:, 2:, 0]
+                        #oo.Bsmpx[it // oo.BsmpxSkp, :, 2:]    = oo.smpx[:, 2:, 0]
                     stds = _N.std(oo.smpx[:, 2+oo.ignr:, 0], axis=1)
                     oo.mnStds[it] = _N.mean(stds, axis=0)
 
-                    ttt6 = _tm.time()
+                    #ttt7 = _tm.time()
                     if not oo.bFixF:   
                         #ARcfSmpl(oo.lfc, ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
                         ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)  
@@ -395,46 +396,40 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     #  sample u     WE USED TO Do this after smpx
                     #  u(it+1)    using ws(it+1), F0(it), smpx(it+1), ws(it+1)
 
-                    if oo.ID_q2:
-                        for m in range(ooTR):
-                            #####################    sample q2
-                            a = oo.a_q2 + 0.5*(ooN+1)  #  N + 1 - 1
-                            rsd_stp = oo.smpx[m, 3+oo.ignr:,0] - _N.dot(oo.smpx[m, 2+oo.ignr:-1], oo.F0).T
-                            BB = oo.B_q2 + 0.5 * _N.dot(rsd_stp, rsd_stp.T)
-                            oo.q2[m] = _ss.invgamma.rvs(a, scale=BB)
-                            oo.x00[m]      = oo.smpx[m, 2]*0.1
-                            oo.smp_q2[m, it]= oo.q2[m]
-                    else:
-                        oo.a2 = oo.a_q2 + 0.5*(ooTR*ooN + 2)  #  N + 1 - 1
-                        #oo.a2 = 0.5*(ooTR*(ooN-oo.ignr) + 2)  #  N + 1 - 1
-                        BB2 = oo.B_q2
-                        #BB2 = 0
-                        for m in range(ooTR):
-                            #   set x00 
-                            oo.x00[m]      = oo.smpx[m, 2]*0.1
+                    oo.a2 = oo.a_q2 + 0.5*(ooTR*ooN + 2)  #  N + 1 - 1
+                    #oo.a2 = 0.5*(ooTR*(ooN-oo.ignr) + 2)  #  N + 1 - 1
+                    BB2 = oo.B_q2
+                    #BB2 = 0
+                    for m in range(ooTR):
+                        #   set x00 
+                        oo.x00[m]      = oo.smpx[m, 2]*0.1
 
-                            #####################    sample q2
-                            rsd_stp = oo.smpx[m, 3+oo.ignr:,0] - _N.dot(oo.smpx[m, 2+oo.ignr:-1], oo.F0).T
-                            #oo.rsds[it, m] = _N.dot(rsd_stp, rsd_stp.T)
-                            BB2 += 0.5 * _N.dot(rsd_stp, rsd_stp.T)
+                        #####################    sample q2
+                        rsd_stp = oo.smpx[m, 3+oo.ignr:,0] - _N.dot(oo.smpx[m, 2+oo.ignr:-1], oo.F0).T
+                        #oo.rsds[it, m] = _N.dot(rsd_stp, rsd_stp.T)
+                        BB2 += 0.5 * _N.dot(rsd_stp, rsd_stp.T)
                         
                         
-                        oo.q2[:] = _ss.invgamma.rvs(oo.a2, scale=BB2)
+                    oo.q2[:] = _ss.invgamma.rvs(oo.a2, scale=BB2)
                     oo.smp_q2[:, it]= oo.q2
 
-                ttt7 = _tm.time()
+                #ttt8 = _tm.time()
 
-    #             print ("t2-t1  %.4f" % (ttt2-ttt1))
-    #             print ("t3-t2  %.4f" % (ttt3-ttt2))
-    #             print ("t4-t3  %.4f" % (ttt4-ttt3))
+    #             print("--------------------------------")
+    #             print ("t2-t1  %.4f" % (#ttt2-#ttt1))
+    #             print ("t3-t2  %.4f" % (#ttt3-#ttt2))
+    #             print ("t4-t3  %.4f" % (#ttt4-#ttt3))
     # #            print ("t4b-t4a  %.4f" % (t4b-t4a))
     # #            print ("t4c-t4b  %.4f" % (t4c-t4b))
     # #            print ("t4-t4c  %.4f" % (t4-t4c))
-    #             print ("t5-t4  %.4f" % (ttt5-ttt4))
-    #             print ("t6-t5  %.4f" % (ttt6-ttt5))
-    #             print ("t7-t6  %.4f" % (ttt7-ttt6))
+    #             print ("t5-t4  %.4f" % (#ttt5-#ttt4))
+    #             print ("t6-t5  %.4f" % (#ttt6-#ttt5))
+    #             print ("t7-t6  %.4f" % (#ttt7-#ttt6))
+    #             print ("t8-t7  %.4f" % (#ttt8-#ttt7))
+            #tttB = _tm.time()
+            #print("#tttB - #tttA  %.4f" % (#tttB - #tttA))
 
-
+            oo.last_iter = it
             if it > oo.minITERS:
                 smps = _N.empty((3, it+1))
                 smps[0, :it+1] = oo.amps[:it+1, 0]
@@ -442,6 +437,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 smps[2, :it+1] = oo.mnStds[:it+1]
 
                 #frms = _mg.stationary_from_Z_bckwd(smps, blksz=oo.peek)
+                if _mg.stationary_test(oo.amps[:it+1, 0], oo.fs[:it+1, 0], oo.mnStds[:it+1], it+1, blocksize=oo.mg_blocksize, points=oo.mg_points):
+                    break
 
                 """
                 fig = _plt.figure(figsize=(8, 8))
@@ -463,9 +460,9 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 _plt.close()
                 """
                 #if it - frms > oo.stationaryDuration:
-                #    break
+                #   break
 
-        oo.dump_smps(0, toiter=(oo.ITERS), dir=oo.mcmcRunDir)
+        oo.dump_smps(0, toiter=(it+1), dir=oo.mcmcRunDir)
         oo.VIS = ARo   #  to examine this from outside
 
 

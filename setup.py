@@ -7,7 +7,7 @@ from distutils.extension import Extension
 #from Cython.Build import cythonize      # cythonize compiles a pyx
 from Cython.Distutils import build_ext   # Extension for a c-file, build_ext for cython file
 
-modules = ["kfARlibMPmv_ram2", "kfcomMPmv_ram", "kfARlib1c", "kdist"]
+modules = ["kfARlibMPmv_ram2", "kfARlibMPmv_ram3", "kfcomMPmv_ram", "kfARlib1c", "kdist"]
 
 ###  import LogitWrapper 
 ###  LogitWrapper
@@ -24,8 +24,8 @@ modules = ["kfARlibMPmv_ram2", "kfcomMPmv_ram", "kfARlib1c", "kdist"]
 incdir = [get_python_inc(plat_specific=1), numpy.get_include(), "pyPG/include/RNG"]
 #libdir = ['/usr/local/lib/gcc/8', '/usr/local/lib']
 libdir = ['/usr/local/lib']
-#os.environ["CC"]  = "/usr/local/bin/gcc-6"
-os.environ["CC"]  = "/usr/local/bin/gcc"
+os.environ["CC"]  = "/usr/local/bin/gcc-6"
+#os.environ["CC"]  = "/usr/local/bin/gcc"
 
 ##  Handle OPENMP switch here
 
@@ -42,7 +42,7 @@ extra_compile_args = []
 
 #if "--use_openmp" in sys.argv:
 USE_OPENMP = True
-#extra_compile_args.extend(["-fopenmp", "-DUSE_OPEN_MP"])
+extra_compile_args.extend(["-fopenmp", "-DUSE_OPEN_MP"])
 #extra_link_args.append("-fopenmp")
 #iop = sys.argv.index("--use_openmp")
 #sys.argv.pop(iop)
