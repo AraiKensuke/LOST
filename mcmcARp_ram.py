@@ -81,7 +81,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.x00         = _N.array(oo.smpx[:, 2])
         oo.V00         = _N.zeros((ooTR, ook, ook))
         if oo.dohist:
-            oo.loghist = _N.zeros(oo.N+1)
+            oo.loghist = _N.zeros(oo.Hbf.shape[0])
         else:
             print("fixed hist is")
             print(oo.loghist)
@@ -136,32 +136,22 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         RHS = _N.empty((oo.histknots, 1))
 
         print("-----------    histknots %d" % oo.histknots)
-        if oo.h0_1 > 1:   #  no spikes in first few time bins
-            #cInds = _N.array([0, 1, 5, 6, 7, 8, 9, 10])
-            cInds = _N.array([0, 4, 5, 6, 7, 8, 9])
-            #vInds = _N.array([2, 3, 4])
-            vInds = _N.array([1, 2, 3,])
-            RHS[cInds, 0] = 0
-            RHS[0, 0] = -5
-        elif oo.hist_max_at_0:   #  no refractory period
-            #cInds = _N.array([5, 6, 7, 8, 9, 10])
-            cInds = _N.array([3, 4, 5, 6, 7, 8, ])
-            vInds = _N.array([0, 1, 2, ])
-            #vInds = _N.array([0, 1, 2, 3, 4])
-            RHS[cInds, 0] = 0
-        else:
-            #cInds = _N.array([5, 6, 7, 8, 9, 10])
-            cInds = _N.array([4, 5, 6, 7, 8, 9,])
-            vInds = _N.array([0, 1, 2, 3, ])
-            #vInds = _N.array([0, 1, 2, 3, 4])
-            RHS[cInds, 0] = 0
+        cInds = _N.arange(oo.iHistKnotBeginFixed+2, oo.histknots)
+        vInds = _N.arange(0, oo.iHistKnotBeginFixed+2)
+        #cInds = _N.array([4, 12, 13])
+        #vInds = _N.array([0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, ])
+        #vInds = _N.arange(0, oo.iHistKnotBeginFixed)
+
+        RHS[cInds, 0] = 0
 
         Msts = []
         for m in range(ooTR):
             Msts.append(_N.where(oo.y[m] == 1)[0])
-        HcM  = _N.empty((len(vInds), len(vInds)))
+        HcM  = _N.ones((len(vInds), len(vInds)))
 
         HbfExpd = _N.zeros((oo.histknots, ooTR, oo.N+1))
+
+        #HbfExpd = _N.zeros((oo.histknots, ooTR, oo.Hbf.shape[0]))
         #  HbfExpd is 11 x M x 1200
         #  find the mean.  For the HISTORY TERM
         for i in range(oo.histknots):
@@ -171,6 +161,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 for iss in range(len(sts)-1):
                     t0  = sts[iss]
                     t1  = sts[iss+1]
+                    #HbfExpd[i, m, t0+1:t1+1] = Hbf[1:t1-t0+1, i]#Hbf[0:t1-t0, i]
                     HbfExpd[i, m, t0+1:t1+1] = Hbf[0:t1-t0, i]
                 HbfExpd[i, m, sts[-1]+1:] = 0
 
@@ -196,6 +187,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
         iterBLOCKS  = oo.ITERS//oo.peek
         smpx_tmp = _N.empty((oo.TR, oo.N+1, oo.k))
+
+
         
         ######  Gibbs sampling procedure
         for itrB in range(iterBLOCKS):
@@ -228,23 +221,45 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                 if oo.dohist:
                     O = kpOws - oo.smpx[..., 2:, 0] - oo.us.reshape((ooTR, 1)) - BaS -  oo.knownSig
+                    if it == 2000:
+                        _N.savetxt("it2000.dat", O)
 
                     iOf = vInds[0]   #  offset HcM index with RHS index.
                     #print(oo.ws)
 
-                    for i in vInds:
-                        for j in vInds:
-                            #print(HbfExpd[i])
-                            #print(HbfExpd[j])
-                            HcM[i-iOf, j-iOf] = _N.sum(oo.ws*HbfExpd[i]*HbfExpd[j])
+                    # for i in vInds:
+                    #     #print("i   %d" % i)
+                    #     #print(_N.sum(HbfExpd[i]))
+                    #     for j in vInds:
+                    #         #print("j   %d" % j)
+                    #         #print(_N.sum(HbfExpd[j]))
+                    #         HcM[i-iOf, j-iOf] = _N.sum(oo.ws*HbfExpd[i]*HbfExpd[j])
 
-                        RHS[i, 0] = _N.sum(oo.ws*HbfExpd[i]*O)
+                    #     RHS[i, 0] = _N.sum(oo.ws*HbfExpd[i]*O)
+                    #     for cj in cInds:
+                    #         RHS[i, 0] -= _N.sum(oo.ws*HbfExpd[i]*HbfExpd[cj])*RHS[cj, 0]
+                    for ii in range(len(vInds)):
+                        #print("i   %d" % i)
+                        #print(_N.sum(HbfExpd[i]))
+                        i = vInds[ii]
+                        for jj in range(len(vInds)):
+                            j = vInds[jj]
+                            #print("j   %d" % j)
+                            #print(_N.sum(HbfExpd[j]))
+                            HcM[ii, jj] = _N.sum(oo.ws*HbfExpd[i]*HbfExpd[j])
+
+                        RHS[ii, 0] = _N.sum(oo.ws*HbfExpd[i]*O)
                         for cj in cInds:
-                            RHS[i, 0] -= _N.sum(oo.ws*HbfExpd[i]*HbfExpd[cj])*RHS[cj, 0]
+                            RHS[ii, 0] -= _N.sum(oo.ws*HbfExpd[i]*HbfExpd[cj])*RHS[cj, 0]
+                        
 
-                    # print HbfExpd
-                    # print HcM
-                    # print RHS[vInds]
+                    # print("HbfExpd..............................")
+                    # for i in range(oo.histknots):
+                    #     print(_N.sum(HbfExpd[i]))
+                    # print("HcM..................................")
+                    # print(HcM)
+                    # print("RHS..................................")
+                    # print(RHS[vInds])
                     vm = _N.linalg.solve(HcM, RHS[vInds])
                     Cov = _N.linalg.inv(HcM)
                     #print vm
@@ -488,7 +503,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         # with open("mARp.dump", "rb") as f:
         # lm = pickle.load(f)
 
-    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False): ###########  RUN
+    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1): ###########  RUN
         oo     = self    #  call self oo.  takes up less room on line
         oo.Cs          = len(oo.freq_lims)
         oo.C           = oo.Cn + oo.Cs
@@ -499,64 +514,13 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.s2_x00       = _arl.dcyCovMat(oo.k, _N.ones(oo.k), 0.4)
         oo.restarts = 0
 
-        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5)
+        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5, multiply_shape_hyperparam=multiply_shape_hyperparam, multiply_scale_hyperparam=multiply_scale_hyperparam)
         oo.setParams()
 
-        print("readSmpls   ")
+        t1    = _tm.time()
 
-        if pckl is not None:
-            print("pckl is not None")
-            oo.restarts = 1
-            oo.F0 = _N.zeros(oo.k)
-            if type(pckl) == list:   #  format for posterior mode
-                oo.us = pckl[0]
-                oo.B  = pckl[4]
-                oo.hS = pckl[5]
-                oo.Hbf = pckl[6]
-                oo.q2 = _N.ones(oo.TR)*pckl[1]
-
-                for l in range(len(pckl[2])):
-                    oo.F0 += (-1*_Npp.polyfromroots(pckl[2][l])[::-1].real)[1:]
-                oo.F0 /= len(pckl[2]) # mean
-                oo.aS = pckl[3]
-            else:   #  format for last
-                pckldITERS = pckl["allalfas"].shape[0]
-                print("found %d Gibbs iterations samples" % pckldITERS)
-                oo.pkldalfas  = pckl["allalfas"][pckldITERS-1]
-                if oo.bpsth:
-                    oo.aS     = pckl["aS"][pckldITERS-1]
-                    oo.B      = pckl["B"]
-                oo.hS     = pckl["h_coeffs"][:, pckldITERS-1]
-                oo.q2     = _N.ascontiguousarray(pckl["q2"][:, pckldITERS-1])
-                oo.us     = _N.ascontiguousarray(pckl["u"][:, pckldITERS-1])
-                oo.smpx   = pckl["smpx"]
-                oo.ws     = pckl["ws"]
-                oo.t0_is_t_since_1st_spk = pckl["t0_is_t_since_1st_spk"]  #overwrite
-                oo.F0     = (-1*_Npp.polyfromroots(oo.pkldalfas)[::-1].real)[1:]
-                oo.F_alfa_rep = oo.pkldalfas.tolist()
-
-
-                if readSmpls:  #  probably not a run, later going to findMode
-                    print("here, in readSmpls")
-                    oo.allalfas  = pckl["allalfas"]
-                    oo.smp_u = pckl["u"]
-                    oo.smp_hS= pckl["h_coeffs"]
-                    oo.smp_q2= pckl["q2"]
-                    if oo.bpsth:
-                        oo.smp_aS= pckl["aS"]
-                    oo.fs    = pckl["fs"]
-                    oo.amps  = pckl["amps"]
-
-            if runlatent and (not dontrun):    #  just generate latent states
-                t1 = _tm.time()
-                oo.latentState()
-                t2 = _tm.time()
-                print(t2-t1)
-        if (not runlatent) and (not dontrun):    #  regular Gibbs sampling
-            t1    = _tm.time()
-
-            oo.gibbsSamp()
-            t2    = _tm.time()
-            print(t2-t1)
-            print("done")
+        oo.gibbsSamp()
+        t2    = _tm.time()
+        print(t2-t1)
+        print("done")
 

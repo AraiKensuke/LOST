@@ -1,7 +1,6 @@
-from LOSTdirs import resFN
 import scipy.signal as _ssig
 import re as _re
-from filter import lpFilt, bpFilt, base_q4atan, gauKer
+from LOST.filter import lpFilt, bpFilt, base_q4atan, gauKer
 import numpy as _N
 import matplotlib.pyplot as _plt
 import random as _ran
@@ -9,33 +8,20 @@ import myColors as mC
 import itertools as itls
 
 #  [3.3, 11, 1, 15]
-def modhistAll(setname, shftPhase=0, fltPrms=[3.3, 11, 1, 15], t0=None, t1=None, tr0=0, tr1=None, trials=None, fn=None, maxY=None, yticks=None, normed=False, surrogates=1, color=None, nofig=False, flatten=False, filtCol=0, xlabel=None, smFnt=20, bgFnt=22):
+def modhistAll(spk01s, x_or_lfp, shftPhase=0, fltPrms=[3.3, 11, 1, 15], t0=None, t1=None, tr0=0, tr1=None, trials=None, fn=None, maxY=None, yticks=None, normed=False, surrogates=1, color=None, nofig=False, flatten=False, filtCol=0, xlabel=None, smFnt=20, bgFnt=22):
     """
     shftPhase from 0 to 1.  
     yticks should look like [[0.5, 1, 1.5], ["0.5", "1", "1.5"]]
     """
-
-    _dat     = _N.loadtxt(resFN("xprbsdN.dat", dir=setname))
-    #  modulation histogram.  phase @ spike
-    Na, cols = _dat.shape
+    cols, Na = spk01s.shape
 
     t0 = 0 if (t0 is None) else t0
     t1 = Na if (t1 is None) else t1
 
-    dat = _dat[t0:t1, :]
     N   = t1-t0
 
-    p = _re.compile("^\d{6}")   # starts like "exptDate-....."
-    m = p.match(setname)
-
-    bRealDat, COLS, sub, phC = True, 4, 2, 3
-    
-    if m == None:
-        bRealDat, COLS, sub = False, 3, 1
-
-    print "realDat is %s" % str(bRealDat)
-
-    TR   = cols / COLS
+    TR   = cols
+    print(TR)
     tr1 = TR if (tr1 is None) else tr1
 
     trials = _N.arange(tr0, tr1) if (trials is None) else trials
@@ -48,20 +34,22 @@ def modhistAll(setname, shftPhase=0, fltPrms=[3.3, 11, 1, 15], t0=None, t1=None,
 
     for tr in trials:
         if fltPrms is not None:
-            x   = dat[:, tr*COLS]
+            x   = x_or_lfp[tr]
             if len(fltPrms) == 2:
                 fx = lpFilt(fltPrms[0], fltPrms[1], 500, x)
             elif len(fltPrms) == 4: 
                 # 20, 40, 10, 55 #(fpL, fpH, fsL, fsH, nyqf, y):
                 fx = bpFilt(fltPrms[0], fltPrms[1], fltPrms[2], fltPrms[3], 500, x)
         else:
-            fx   = dat[:, tr*COLS+filtCol]
+            #fx   = dat[:, tr*COLS+filtCol]
+            fx   = x_or_lfp[tr]
 
         ht_x  = _ssig.hilbert(fx)
         ph_x  = (_N.arctan2(ht_x.imag, ht_x.real) + _N.pi) / (2*_N.pi)
         ph_x  = _N.mod(ph_x + shftPhase, 1)
 
-        ispks  = _N.where(dat[:, tr*COLS+(COLS-sub)] == 1)[0]
+        #ispks  = _N.where(dat[:, tr*COLS+(COLS-sub)] == 1)[0]
+        ispks  = _N.where(spk01s[tr] == 1)[0]
         cSpkPhs.append(_N.cos(2*_N.pi*ph_x[ispks]))
         sSpkPhs.append(_N.sin(2*_N.pi*ph_x[ispks]))
         phs.append(ph_x[ispks])
@@ -71,10 +59,10 @@ def modhistAll(setname, shftPhase=0, fltPrms=[3.3, 11, 1, 15], t0=None, t1=None,
             return phs
         else:
             fl = []
-            for i in xrange(len(phs)):
+            for i in range(len(phs)):
                 fl.extend(phs[i])
             return fl
-    return figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, surrogates=surrogates, normed=normed, fn=fn, maxY=maxY, yticks=yticks, setname=setname, color=color, xlabel=xlabel, smFnt=smFnt, bgFnt=bgFnt)
+    return figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, surrogates=surrogates, normed=normed, fn=fn, maxY=maxY, yticks=yticks, color=color, xlabel=xlabel, smFnt=smFnt, bgFnt=bgFnt)
 
 def histPhase0_phaseInfrdAll(mARp, _mdn, t0=None, t1=None, bRealDat=False, trials=None, fltPrms=None, maxY=None, yticks=None, fn=None, normed=False, surrogates=1, shftPhase=0, color=None):
     if not bRealDat:
@@ -90,7 +78,7 @@ def _histPhase0_phaseInfrdAll(TR, N, x, _mdn, t0=None, t1=None, bRealDat=False, 
 
     if (fltPrms is not None) and (not bRealDat):
         _fx = _N.empty((TR, N))
-        for tr in xrange(TR):
+        for tr in range(TR):
             if len(fltPrms) == 2:
                 _fx[tr] = lpFilt(fltPrms[0], fltPrms[1], 500, x[tr])
             elif len(fltPrms) == 4: 
@@ -145,7 +133,7 @@ def _histPhase0_phaseInfrdAll(TR, N, x, _mdn, t0=None, t1=None, bRealDat=False, 
         sSpkPhs.append(_N.sin(2*_N.pi*ph_fx[inds+t0]))
         phs.append(ph_fx[inds+t0])
         
-        #for i in xrange(t0-t0, t1-t0-1):
+        #for i in range(t0-t0, t1-t0-1):
         #    if (ph_mdn[i] < 1) and (ph_mdn[i] > 0.5) and (ph_mdn[i+1] < -0.5):
         #        pInfrdAt0.append(ph_fx[i]/2.)
 
@@ -165,7 +153,7 @@ def getPhases(_mdn, offset=0):
     mdn = _mdn
     itr   = 0
 
-    for tr in xrange(TR):
+    for tr in range(TR):
         itr += 1
         cv = _N.convolve(mdn[tr] - _N.mean(mdn[tr]), gk, mode="same")
 
@@ -182,7 +170,7 @@ def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surroga
     ltr = len(trials)
     inorderTrials = _N.arange(ltr)   #  original trial IDs no lnger necessary
     R2s = _N.empty(surrogates)
-    for srgt in xrange(surrogates):
+    for srgt in range(surrogates):
         if srgt == 0:
             trls = inorderTrials
         else:
@@ -207,7 +195,7 @@ def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surroga
         ec = mC.hist1
     else:
         ec = color
-    _plt.hist(vPhs.tolist() + (vPhs + 1).tolist(), bins=_N.linspace(0, 2, 51), color=ec, edgecolor=ec, normed=normed)
+    _plt.hist(vPhs.tolist() + (vPhs + 1).tolist(), bins=_N.linspace(0, 2, 51), color=ec, edgecolor=ec, density=normed)
 
     if maxY is not None:
         _plt.ylim(0, maxY)
@@ -239,11 +227,11 @@ def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surroga
     else:
         fn = "%(1)s,R=%(2).3f.eps" % {"1" : fn, "2" : R2s[0]}
         
-    if setname is not None:
-        _plt.savefig(resFN(fn, dir=setname), transparent=True)
-    else:
-        _plt.savefig(fn, transparent=True)
-    _plt.close()
+    # if setname is not None:
+    #     _plt.savefig(resFN(fn, dir=setname), transparent=True)
+    # else:
+    #     _plt.savefig(fn, transparent=True)
+    # _plt.close()
     return R2s
 
 def oscPer(setname, fltPrms=[5, 13, 1, 20], t0=None, t1=None, tr0=0, tr1=None, trials=None, fn=None, showHist=True, osc=None):
@@ -312,4 +300,4 @@ def oscPer(setname, fltPrms=[5, 13, 1, 20], t0=None, t1=None, tr0=0, tr1=None, t
         _plt.hist(Ts, bins=range(min(Ts) - 1, max(Ts)+1))
     mn = _N.mean(Ts)
     std= _N.std(Ts)
-    print "mean Hz %(f).3f    cv: %(cv).3f" % {"cv" : (std/mn), "f" : (1000/mn)}
+    print("mean Hz %(f).3f    cv: %(cv).3f" % {"cv" : (std/mn), "f" : (1000/mn)})

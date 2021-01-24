@@ -333,6 +333,7 @@ def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2=None, nRhythms=1, p=1, x=
         
     spks = _N.zeros(N)
     prbs = _N.zeros(N)
+    latst = _N.zeros(N)
     prbsWithHist = _N.zeros(N)
     prbsNOsc = _N.zeros(N)   #  no osc.
     fs   = _N.zeros(N)
@@ -350,7 +351,7 @@ def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2=None, nRhythms=1, p=1, x=
 
     for i in range(N):
         e = _N.exp(u_psth[i] + offset[i] + cs * etme[i] * x[i+buf]) * dt
-        prbs[i]  = (p*e) / (1 + e)
+        prbs[i] = (p*e) / (1 + e)
         e = _N.exp(u_psth[i]) * dt
         prbsNOsc[i]  = (p*e) / (1 + e)
 
@@ -362,9 +363,10 @@ def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2=None, nRhythms=1, p=1, x=
         spks[i] = _N.random.binomial(1, prbsWithHist[i])
         if spks[i] == 1:
             ht = i+1    #  lambda2[0] is history 1 bin after spike
+        latst[i] = x[i+buf]
 
     fs[:] = prbsWithHist / dt
-    return xc[:, buf:], spks, prbs, prbsWithHist, fs, prbsNOsc
+    return xc[:, buf:], spks, latst, prbsWithHist, fs, prbsNOsc
 
 """
 def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
@@ -687,22 +689,20 @@ def disjointSubset(_superSet, subSetA):
             pass
     return list(superSet)
 
-def isis(dat, COLS, spkcol=2, trials=None, t0=0, t1=None):
+def ISIs(dat, trials=None, t0=0, t1=None):
     isis = []
     if trials is None:
-        TR = (dat.shape[1] / COLS)
-        trials = range(TR)
+        TR = dat.shape[0]
+        trials = _N.arange(TR)
     if t1 is None:
-        t1 = dat.shape[0]
+        t1 = dat.shape[1]
 
     for tr in trials:
-        spkts = _N.where(dat[t0:t1, COLS*tr + spkcol] == 1)
-        isi   = _N.diff(spkts[0])
+        spkts = _N.where(dat[tr, t0:t1] == 1)[0]
+        isi   = _N.diff(spkts)
         isis.extend(isi)
 
-    return isis
-        
-
+    return _N.array(isis)
 
 def findMode(dmp, setname, burn, NMC, startIt=None, NB=20, NeighB=1, dir=None):
     smp_u  = dmp["u"]
@@ -761,9 +761,11 @@ def findMode(dmp, setname, burn, NMC, startIt=None, NB=20, NeighB=1, dir=None):
     dmp.close()
 
 
-def downsamplespkdat(dat, isipctl):
+def downsamplespkdat(dat, isipctl, max_evry=3):
     """
     look at ISI distribution, and if the shortest ISI is above 1
+    if we make bin too large, will lead to inaccurate history effect
+    can appear as strong "bursting" effect
     """
     TR = dat.shape[0]
 
@@ -780,6 +782,7 @@ def downsamplespkdat(dat, isipctl):
 
     y = _N.cumsum(cnts) / _N.sum(cnts)
     evry = _N.where((y[0:-1] < isipctl) & (y[1:] >= isipctl))[0][0] + 1
+    evry = evry if evry <= max_evry else max_evry
 
     #  downsample data
 
