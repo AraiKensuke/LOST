@@ -110,8 +110,9 @@ class mcmcARspk(mAR.mcmcAR):
         # if (self.noAR is not None) or (self.noAR == False):
         #     self.lfc         = _lfc.logerfc()
 
-    def loadDat(self, runDir, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1): #################  loadDat
+    def loadDat(self, runDir, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70): #################  loadDat
         oo = self
+        hist_timescale = hist_timescale_ms*0.001
         bGetFP = False
 
         x_st_cnts = _N.loadtxt(datfilename)
@@ -232,28 +233,16 @@ class mcmcARspk(mAR.mcmcAR):
         print("*****************")
         cnts, bins = _N.histogram(isis, bins=_N.linspace(0.5, maxisi+0.5, maxisi+1))    #  cnts[0]   are number of ISIs of size 1
 
-        asymptote  = int(sisis[int(Lisi*0.7)])
-        smallisi   = int(sisis[int(Lisi*0.05)])
-        #if smallisi >= 2:
-        #    smallisi /= 2
 
-        hist_interior_knots  = _N.empty(14)
-        lin01 = _N.linspace(0, 1, 11, endpoint=True)
-        sqr01 = _N.linspace(0, 1, 14, endpoint=True)**2
-        hist_interior_knots[0:11] = smallisi + lin01 * (asymptote - smallisi)
-        lin01 = _N.linspace(0, 1, 3, endpoint=True)
-        pt1 = int(sisis[int(Lisi*0.8)])
-        pt2 = int(sisis[Lisi-1]*1.2)
-        print(pt1)
-        print(pt2)
-        lin01 = _N.linspace(0, 1, 3, endpoint=True)
-        hist_interior_knots[11:14] = pt1 + lin01 * (pt2-pt1)
-        print(hist_interior_knots)
-        #hist_interior_knots[0:6] = _N.linspace(smallisi, asymptote, 6, endpoint=True)
-        #hist_interior_knots[0:6] = _N.linspace(smallisi, asymptote, 6, endpoint=True)
-        #hist_interior_knots[0:8] = _N.linspace(smallisi, asymptote, 6, endpoint=True)
-        print("hist_interior_knots!!!!!")
-        print(hist_interior_knots)
+        smallisi   = int(sisis[int(Lisi*0.1)])
+        #  hist_timescale in ms
+        asymptote  = smallisi + int(hist_timescale / oo.dt)   #  100 ms
+
+        n_interior_knots = 8
+        hist_interior_knots  = _N.empty(n_interior_knots)
+        lin01 = _N.linspace(0, 1, n_interior_knots, endpoint=True)
+        sqr01 = lin01**2
+        hist_interior_knots[0:8] = smallisi + sqr01 * (asymptote - smallisi)
 
         crats = _N.zeros(maxisi-1)
         for n in range(0, maxisi-2):
@@ -301,7 +290,7 @@ class mcmcARspk(mAR.mcmcAR):
             max_locs[i] = _N.where(oo.Hbf[:, i] == _N.max(oo.Hbf[:, i]))[0]
         print(max_locs)
         #  find the knot that's closest to   hist_interior_knots[4] (90th %tile)
-        dist_from_90th = _N.abs(max_locs - hist_interior_knots[11])
+        dist_from_90th = _N.abs(max_locs - asymptote)
         #print(dist_from_90th)
         oo.iHistKnotBeginFixed = _N.where(dist_from_90th == _N.min(dist_from_90th))[0][0]
         oo.histknots = oo.Hbf.shape[1]

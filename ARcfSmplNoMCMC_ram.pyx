@@ -13,8 +13,15 @@ import matplotlib.pyplot as _plt
 import time as _tm
 
 
-def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts=1, prior=_cd.__COMP_REF__, aro=_cd.__NF__, sig_ph0L=-1, sig_ph0H=0):
+def ARcfSmpl(int N, int k, double[::1] AR2lims, double[:, : ::1] smpxU, double[:, : ::1] smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] alpR, complex[::1] alpC, int TR, int sig_ph0L, int sig_ph0H):
+    """
+    Cs   - number of signal roots
+    Cn   - number of noise roots
+    """
     ttt1 = _tm.time()
+
+    valpR = _N.array(alpR)
+    valpC = _N.array(alpC)
 
     C = Cs + Cn
 
@@ -22,7 +29,7 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
 
     ujs     = _N.empty((TR, R, N + 1, 1))
     wjs     = _N.empty((TR, C, N + 2, 1))
-
+    
     #  CONVENTIONS, DATA FORMAT
     #  x1...xN  (observations)   size N-1
     #  x{-p}...x{0}  (initial values, will be guessed)
@@ -54,6 +61,8 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
     Mj     = _N.empty(TR)
     Mji    = _N.empty(TR)
     mj     = _N.empty(TR)
+    filtrootsC = _N.empty(2*C-2+R, dtype=_N.complex)
+    filtrootsR = _N.empty(2*C+R-1, dtype=_N.complex)
 
     #  r = sqrt(-1*phi_1)   0.25 = -1*phi_1   -->  phi_1 >= -0.25   gives r >= 0.5 for signal components   
     if aro == _cd.__SF__:    #  signal first
@@ -79,13 +88,30 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         j = 2*c + 1
         p1a =  AR2lims[c, 0]
         p1b =  AR2lims[c, 1]
-
+        
+        iif = -1
+        for ii in range(C):
+            #if (ii != j) and (ii != j-1):
+            if (ii != c):
+                iif += 1
+                filtrootsC[iif] = valpC[2*ii]
+                iif += 1
+                filtrootsC[iif] = valpC[2*ii+1]
+        for ii in range(R):
+            filtrootsC[ii+2*C-2] = valpR[ii]
         # given all other roots except the jth.  This is PHI0
+            
         jth_r1 = alpC.pop(j)    #  negative root   #  nothing is done with these
         jth_r2 = alpC.pop(j-1)  #  positive root
 
         #  exp(-(Y - FX)^2 / 2q^2)
-        Frmj = _Npp.polyfromroots(alpR + alpC).real
+
+        #Frmj = _Npp.polyfromroots(alpR + alpC).real
+        Frmj = _Npp.polyfromroots(filtrootsC).real
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(_N.array(alpR + alpC))
+        # print(filtrootsC)
+        
         #print "ampAngRep"
         #print ampAngRep(alpC)
 
@@ -104,10 +130,7 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
             ####   Needed for proposal density calculation
             #Ys[:, 0]    = wj[2:N, 0]
             Ys[:]    = wjs[m, c, 2:N]
-            #Ys          = Ys.reshape(N-2, 1)
-            #Xs[m, :, 0] = wj[1:N-1, 0]   # new old
             Xs[m, :, 0] = wjs[m, c, 1:N-1, 0]   # new old
-            #Xs[m, :, 1] = wj[0:N-2, 0]
             Xs[m, :, 1] = wjs[m, c, 0:N-2, 0]
             iH[m]       = _N.dot(Xs[m].T, Xs[m]) / q2[m]
             #H[m]        = _N.linalg.inv(iH[m])   #  aka A
@@ -163,24 +186,37 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         img        = _N.sqrt(-(A[0]*A[0] + 4*A[1]))*1j
         #vals, vecs = _N.linalg.eig(_N.array([A, [1, 0]]))
             
-        #alpC.insert(j-1, (A[0] + img)*0.5)
-        #alpC.insert(j,   (A[0] - img)*0.5)       #  vals[1] now at end
-
         #  the positive root comes first
+        valpC[j-1] = (A[0] - img)*0.5
+        valpC[j]   = (A[0] + img)*0.5
         alpC.insert(j-1, (A[0] - img)*0.5)     #alpC.insert(j - 1, jth_r1)
         alpC.insert(j-1, (A[0] + img)*0.5)     #alpC.insert(j - 1, jth_r2)
         tttC = _tm.time()
         ttt2a += tttB - tttA
         ttt2b += tttC - tttB
 
-
+    # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    # print(alpC)
+    # print(valpC)
     Ff  = _N.zeros((1, k))
     ######     REAL ROOTS.  Directly sample the conditional posterior
     for j in range(R - 1, -1, -1):
         # given all other roots except the jth
-        jth_r = alpR.pop(j)
+        #jth_r = alpR.pop(j)
 
-        Frmj = _Npp.polyfromroots(alpR + alpC).real #  Ff first element k-delay
+        for ii in range(C):
+            filtrootsR[2*ii] = valpC[2*ii]
+            filtrootsR[2*ii+1] = valpC[2*ii+1]
+        iif = -1
+        for ii in range(R):
+            if ii != j:
+                iif += 1
+                filtrootsR[iif+2*C] = valpR[ii]
+
+        #print("R !!!!")
+        #print(alpR + alpC)
+        #print(filtrootsR)
+        Frmj = _Npp.polyfromroots(filtrootsR).real #  Ff first element k-delay
         Ff[0, :] = Frmj[::-1]   #  Prod{i neq j} (1 - alfa_i B)
 
         ##########  CREATE FILTERED TIMESERIES   ###########
@@ -206,7 +242,10 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         #  we only want 
         rj = _kd.truncnorm(a=-1, b=1, u=U, std=_N.sqrt(J))
 
-        alpR.insert(j, rj)
+        #alpR.insert(j, rj)
+        valpR[j] = rj
+    alpR[:] = valpR
+    alpC[:] = valpC
     ttt3 = _tm.time()
 
     # print("--------------------------------")
@@ -218,98 +257,3 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
 
     #return ujs, wjs#, lsmpld
 
-
-def FilteredTimeseries(N, k, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR):
-    C = Cs + Cn
-
-    #  I return F and Eigvals
-
-    ujs     = _N.empty((TR, R, N + 1, 1))
-    wjs     = _N.empty((TR, C, N + 2, 1))
-
-    #  CONVENTIONS, DATA FORMAT
-    #  x1...xN  (observations)   size N-1
-    #  x{-p}...x{0}  (initial values, will be guessed)
-    #  smpx
-    #  ujt      depends on x_t ... x_{t-p-1}  (p-1 backstep operators)
-    #  1 backstep operator operates on ujt
-    #  wjt      depends on x_t ... x_{t-p-2}  (p-2 backstep operators)
-    #  2 backstep operator operates on wjt
-    #  
-    #  smpx is N x p.  The first element has x_0...x_{-p} in it
-    #  For real filter
-    #  prod_{i neq j} (1 - alpi B) x_t    operates on x_t...x_{t-p+1}
-    #  For imag filter
-    #  prod_{i neq j,j+1} (1 - alpi B) x_t    operates on x_t...x_{t-p+2}
-
-    ######  COMPLEX ROOTS.  Cannot directly sample the conditional posterior
-
-    Ff  = _N.zeros((1, k-1))
-
-    for c in range(C-1, -1, -1):
-        j = 2*c + 1
-
-        # given all other roots except the jth.  This is PHI0
-        jth_r1 = alpC.pop(j)
-        jth_r2 = alpC.pop(j-1)
-
-        #  print jth_r1
-        #  exp(-(Y - FX)^2 / 2q^2)
-        Frmj = _Npp.polyfromroots(alpR + alpC).real
-
-        Ff[0, :]   = Frmj[::-1]
-        #  Ff first element k-delay,  Prod{i neq j} (1 - alfa_i B)
-
-        ##########  CREATE FILTERED TIMESERIES   ###########
-        ##########  Frmj is k x k, smpxW is (N+2) x k ######
-
-        for m in range(TR):
-            _N.dot(smpxW[m], Ff.T, out=wjs[m, c])
-            
-        alpC.insert(j-1, jth_r1)
-        alpC.insert(j,   jth_r2)
-
-    Ff  = _N.zeros((1, k))
-    ######     REAL ROOTS.  Directly sample the conditional posterior
-    for j in range(R - 1, -1, -1):
-        # given all other roots except the jth
-        jth_r = alpR.pop(j)
-
-        Frmj = _Npp.polyfromroots(alpR + alpC).real #  Ff first element k-delay
-        Ff[0, :] = Frmj[::-1]   #  Prod{i neq j} (1 - alfa_i B)
-
-        ##########  CREATE FILTERED TIMESERIES   ###########
-        ##########  Frmj is k x k, smpxU is (N+1) x k ######
-
-        for m in range(TR):
-            _N.dot(smpxU[m], Ff.T, out=ujs[m, j])
-
-        alpR.insert(j, jth_r)
-
-    return ujs, wjs#, lsmpld
-
-
-def timeseries_decompose(R, C, allalfas, TR, it, N, ignr, rt, zt, uts, wts):
-    """
-    uts, wts   filtered time series
-    rt, zt     decomposed, additive components
-    """
-    for tr in range(TR):
-        b, c = dcmpcff(alfa=allalfas[it])
-        #print("---------------")
-        #print b
-        #print c
-
-        for r in range(R):
-            rt[it, tr, :, r] = b[r] * uts[tr, r, :, 0]
-
-        for z in range(C):
-            #print("%dth comp" % z)
-            cf1 = 2*c[2*z].real
-            gam = allalfas[it, R+2*z]
-            #print(gam)
-            cf2 = 2*(c[2*z].real*gam.real + c[2*z].imag*gam.imag)
-            #print("%(1).3f  %(2).3f" % {"1" : cf1, "2" : cf2})
-            zt[it, tr, 0:N-ignr-2, z] = \
-                cf1*wts[tr, z, 1:N-ignr-1, 0] - \
-                cf2*wts[tr, z, 0:N-ignr-2, 0]

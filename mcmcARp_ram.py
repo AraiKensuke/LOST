@@ -12,7 +12,8 @@ import time as _tm
 import LOST.ARlib as _arl
 import LOST.kfARlibMPmv_ram2 as _kfar
 import pyPG as lw
-from LOST.ARcfSmplNoMCMC import ARcfSmpl
+from LOST.ARcfSmplNoMCMCNoList import ARcfSmpl
+#from LOST.ARcfSmplNoMCMC import ARcfSmpl
 #from ARcfSmpl2 import ARcfSmpl
 
 import commdefs as _cd
@@ -67,6 +68,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
     VIS           = None
 
     ignr          = 0
+
+    use_orig_ARcfSmplNoMCMC = False
 
     def gibbsSamp(self):  ###########################  GIBBSSAMPH
         oo          = self
@@ -127,6 +130,11 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.allocateSmp(runTO+1, Bsmpx=oo.doBsmpx)
         alpR   = oo.F_alfa_rep[0:oo.R]
         alpC   = oo.F_alfa_rep[oo.R:]
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print(oo.F_alfa_rep)
+        print("*****************************")
+        print(alpR)
+        print(alpC)
 
         BaS = _N.zeros(oo.N+1)#_N.empty(oo.N+1)
 
@@ -136,8 +144,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         RHS = _N.empty((oo.histknots, 1))
 
         print("-----------    histknots %d" % oo.histknots)
-        cInds = _N.arange(oo.iHistKnotBeginFixed+2, oo.histknots)
-        vInds = _N.arange(0, oo.iHistKnotBeginFixed+2)
+        cInds = _N.arange(oo.iHistKnotBeginFixed, oo.histknots)
+        vInds = _N.arange(0, oo.iHistKnotBeginFixed)
         #cInds = _N.array([4, 12, 13])
         #vInds = _N.array([0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, ])
         #vInds = _N.arange(0, oo.iHistKnotBeginFixed)
@@ -386,124 +394,136 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     stds = _N.std(oo.smpx[:, 2+oo.ignr:, 0], axis=1)
                     oo.mnStds[it] = _N.mean(stds, axis=0)
 
+                    print(alpR)
+                    print(alpC)
                     #ttt7 = _tm.time()
-                    if not oo.bFixF:   
+                    #if not oo.bFixF:   
                         #ARcfSmpl(oo.lfc, ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
-                        ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)  
-                        oo.F_alfa_rep = alpR + alpC   #  new constructed
-                        prt, rank, f, amp = ampAngRep(oo.F_alfa_rep, f_order=True)
-                        #print prt
-                    #ut, wt = FilteredTimeseries(ooN+1, ook, oo.smpx[:, 1:, 0:ook], oo.smpx[:, :, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR)
-                    #ranks[it]    = rank
-                    oo.allalfas[it] = oo.F_alfa_rep
+#                        ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)  
 
-                    for m in range(ooTR):
-                        #oo.wts[m, it, :, :]   = wt[m, :, :, 0]
-                        #oo.uts[m, it, :, :]   = ut[m, :, :, 0]
-                        if not oo.bFixF:
-                            oo.amps[it, :]  = amp
-                            oo.fs[it, :]    = f
 
-                    oo.F0          = (-1*_Npp.polyfromroots(oo.F_alfa_rep)[::-1].real)[1:]
-                    for tr in range(oo.TR):
-                        oo.Fs[tr, 0]    = oo.F0[:]
 
-                    #  sample u     WE USED TO Do this after smpx
-                    #  u(it+1)    using ws(it+1), F0(it), smpx(it+1), ws(it+1)
+    #                     #ttt8 = _tm.time()
+    #                     oo.F_alfa_rep = alpR + alpC   #  new constructed
+    #                     prt, rank, f, amp = ampAngRep(oo.F_alfa_rep, f_order=True)
+    #                     #print prt
+    #                 #ut, wt = FilteredTimeseries(ooN+1, ook, oo.smpx[:, 1:, 0:ook], oo.smpx[:, :, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR)
+    #                 #ranks[it]    = rank
+    #                 oo.allalfas[it] = oo.F_alfa_rep
 
-                    oo.a2 = oo.a_q2 + 0.5*(ooTR*ooN + 2)  #  N + 1 - 1
-                    #oo.a2 = 0.5*(ooTR*(ooN-oo.ignr) + 2)  #  N + 1 - 1
-                    BB2 = oo.B_q2
-                    #BB2 = 0
-                    for m in range(ooTR):
-                        #   set x00 
-                        oo.x00[m]      = oo.smpx[m, 2]*0.1
+    #                 for m in range(ooTR):
+    #                     #oo.wts[m, it, :, :]   = wt[m, :, :, 0]
+    #                     #oo.uts[m, it, :, :]   = ut[m, :, :, 0]
+    #                     if not oo.bFixF:
+    #                         oo.amps[it, :]  = amp
+    #                         oo.fs[it, :]    = f
 
-                        #####################    sample q2
-                        rsd_stp = oo.smpx[m, 3+oo.ignr:,0] - _N.dot(oo.smpx[m, 2+oo.ignr:-1], oo.F0).T
-                        #oo.rsds[it, m] = _N.dot(rsd_stp, rsd_stp.T)
-                        BB2 += 0.5 * _N.dot(rsd_stp, rsd_stp.T)
+    #                 #ttt9 = _tm.time()
+    #                 oo.F0          = (-1*_Npp.polyfromroots(oo.F_alfa_rep)[::-1].real)[1:]
+    #                 for tr in range(oo.TR):
+    #                     oo.Fs[tr, 0]    = oo.F0[:]
+
+    #                 #  sample u     WE USED TO Do this after smpx
+    #                 #  u(it+1)    using ws(it+1), F0(it), smpx(it+1), ws(it+1)
+
+    #                 oo.a2 = oo.a_q2 + 0.5*(ooTR*ooN + 2)  #  N + 1 - 1
+    #                 #oo.a2 = 0.5*(ooTR*(ooN-oo.ignr) + 2)  #  N + 1 - 1
+    #                 BB2 = oo.B_q2
+    #                 #BB2 = 0
+    #                 for m in range(ooTR):
+    #                     #   set x00 
+    #                     oo.x00[m]      = oo.smpx[m, 2]*0.1
+
+    #                     #####################    sample q2
+    #                     rsd_stp = oo.smpx[m, 3+oo.ignr:,0] - _N.dot(oo.smpx[m, 2+oo.ignr:-1], oo.F0).T
+    #                     #oo.rsds[it, m] = _N.dot(rsd_stp, rsd_stp.T)
+    #                     BB2 += 0.5 * _N.dot(rsd_stp, rsd_stp.T)
                         
                         
-                    oo.q2[:] = _ss.invgamma.rvs(oo.a2, scale=BB2)
-                    oo.smp_q2[:, it]= oo.q2
+    #                 oo.q2[:] = _ss.invgamma.rvs(oo.a2, scale=BB2)
+    #                 oo.smp_q2[:, it]= oo.q2
 
-                #ttt8 = _tm.time()
+    #             #ttt10 = _tm.time()
 
-    #             print("--------------------------------")
-    #             print ("t2-t1  %.4f" % (#ttt2-#ttt1))
-    #             print ("t3-t2  %.4f" % (#ttt3-#ttt2))
-    #             print ("t4-t3  %.4f" % (#ttt4-#ttt3))
-    # #            print ("t4b-t4a  %.4f" % (t4b-t4a))
-    # #            print ("t4c-t4b  %.4f" % (t4c-t4b))
-    # #            print ("t4-t4c  %.4f" % (t4-t4c))
-    #             print ("t5-t4  %.4f" % (#ttt5-#ttt4))
-    #             print ("t6-t5  %.4f" % (#ttt6-#ttt5))
-    #             print ("t7-t6  %.4f" % (#ttt7-#ttt6))
-    #             print ("t8-t7  %.4f" % (#ttt8-#ttt7))
-            #tttB = _tm.time()
-            #print("#tttB - #tttA  %.4f" % (#tttB - #tttA))
+    # #             print("--------------------------------")
+    # #             print ("t2-t1  %.4f" % (#ttt2-#ttt1))
+    # #             print ("t3-t2  %.4f" % (#ttt3-#ttt2))
+    # #             print ("t4-t3  %.4f" % (#ttt4-#ttt3))
+    # # #            print ("t4b-t4a  %.4f" % (t4b-t4a))
+    # # #            print ("t4c-t4b  %.4f" % (t4c-t4b))
+    # # #            print ("t4-t4c  %.4f" % (t4-t4c))
+    # #             print ("t5-t4  %.4f" % (#ttt5-#ttt4))
+    # #             print ("t6-t5  %.4f" % (#ttt6-#ttt5))
+    # #             print ("t7-t6  %.4f" % (#ttt7-#ttt6))
+    # #             print ("t8-t7  %.4f" % (#ttt8-#ttt7))
+    # #             print ("t9-t8  %.4f" % (#ttt9-#ttt8))
+    # #             print ("t10-t9  %.4f" % (#ttt10-#ttt9))
+    #         #tttB = _tm.time()
+    #         #print("#tttB - #tttA  %.4f" % (#tttB - #tttA))
 
-            oo.last_iter = it
-            if it > oo.minITERS:
-                smps = _N.empty((3, it+1))
-                smps[0, :it+1] = oo.amps[:it+1, 0]
-                smps[1, :it+1] = oo.fs[:it+1, 0]
-                smps[2, :it+1] = oo.mnStds[:it+1]
+    #         oo.last_iter = it
+    #         if it > oo.minITERS:
+    #             smps = _N.empty((3, it+1))
+    #             smps[0, :it+1] = oo.amps[:it+1, 0]
+    #             smps[1, :it+1] = oo.fs[:it+1, 0]
+    #             smps[2, :it+1] = oo.mnStds[:it+1]
 
-                #frms = _mg.stationary_from_Z_bckwd(smps, blksz=oo.peek)
-                if _mg.stationary_test(oo.amps[:it+1, 0], oo.fs[:it+1, 0], oo.mnStds[:it+1], it+1, blocksize=oo.mg_blocksize, points=oo.mg_points):
-                    break
+    #             #frms = _mg.stationary_from_Z_bckwd(smps, blksz=oo.peek)
+    #             if _mg.stationary_test(oo.amps[:it+1, 0], oo.fs[:it+1, 0], oo.mnStds[:it+1], it+1, blocksize=oo.mg_blocksize, points=oo.mg_points):
+    #                 break
 
-                """
-                fig = _plt.figure(figsize=(8, 8))
-                fig.add_subplot(3, 1, 1)
-                _plt.plot(range(1, it), oo.amps[1:it, 0], color="grey", lw=1.5)
-                _plt.plot(range(0, it), oo.amps[0:it, 0], color="black", lw=3)
-                _plt.ylabel("amp")
-                fig.add_subplot(3, 1, 2)
-                _plt.plot(range(1, it), oo.fs[1:it, 0]/(2*oo.dt), color="grey", lw=1.5)
-                _plt.plot(range(0, it), oo.fs[0:it, 0]/(2*oo.dt), color="black", lw=3)
-                _plt.ylabel("f")
-                fig.add_subplot(3, 1, 3)
-                _plt.plot(range(1, it), oo.mnStds[1:it], color="grey", lw=1.5)
-                _plt.plot(range(0, it), oo.mnStds[0:it], color="black", lw=3)
-                _plt.ylabel("amp")
-                _plt.xlabel("iter")
-                _plt.savefig("%(dir)stmp-fsamps%(it)d" % {"dir" : oo.mcmcRunDir, "it" : it+1})
-                fig.subplots_adjust(left=0.15, bottom=0.15, right=0.95, top=0.95)
-                _plt.close()
-                """
-                #if it - frms > oo.stationaryDuration:
-                #   break
+    #             """
+    #             fig = _plt.figure(figsize=(8, 8))
+    #             fig.add_subplot(3, 1, 1)
+    #             _plt.plot(range(1, it), oo.amps[1:it, 0], color="grey", lw=1.5)
+    #             _plt.plot(range(0, it), oo.amps[0:it, 0], color="black", lw=3)
+    #             _plt.ylabel("amp")
+    #             fig.add_subplot(3, 1, 2)
+    #             _plt.plot(range(1, it), oo.fs[1:it, 0]/(2*oo.dt), color="grey", lw=1.5)
+    #             _plt.plot(range(0, it), oo.fs[0:it, 0]/(2*oo.dt), color="black", lw=3)
+    #             _plt.ylabel("f")
+    #             fig.add_subplot(3, 1, 3)
+    #             _plt.plot(range(1, it), oo.mnStds[1:it], color="grey", lw=1.5)
+    #             _plt.plot(range(0, it), oo.mnStds[0:it], color="black", lw=3)
+    #             _plt.ylabel("amp")
+    #             _plt.xlabel("iter")
+    #             _plt.savefig("%(dir)stmp-fsamps%(it)d" % {"dir" : oo.mcmcRunDir, "it" : it+1})
+    #             fig.subplots_adjust(left=0.15, bottom=0.15, right=0.95, top=0.95)
+    #             _plt.close()
+    #             """
+    #             #if it - frms > oo.stationaryDuration:
+    #             #   break
 
-        oo.dump_smps(0, toiter=(it+1), dir=oo.mcmcRunDir)
-        oo.VIS = ARo   #  to examine this from outside
+    #     oo.dump_smps(0, toiter=(it+1), dir=oo.mcmcRunDir)
+    #     oo.VIS = ARo   #  to examine this from outside
 
 
-    def dump(self, dir=None):
-        oo    = self
-        pcklme = [oo]
-        #oo.Bsmpx = None
-        oo.smpx  = None
-        oo.wts   = None
-        oo.uts   = None
-        oo.lfc   = None
-        oo.rts   = None
-        oo.zts   = None
+    # def dump(self, dir=None):
+    #     oo    = self
+    #     pcklme = [oo]
+    #     #oo.Bsmpx = None
+    #     oo.smpx  = None
+    #     oo.wts   = None
+    #     oo.uts   = None
+    #     oo.lfc   = None
+    #     oo.rts   = None
+    #     oo.zts   = None
 
-        if dir is None:
-            dmp = open("oo.dump", "wb")
-        else:
-            dmp = open("%s/oo.dump" % dir, "wb")
-        pickle.dump(pcklme, dmp, -1)
-        dmp.close()
+    #     if dir is None:
+    #         dmp = open("oo.dump", "wb")
+    #     else:
+    #         dmp = open("%s/oo.dump" % dir, "wb")
+    #     pickle.dump(pcklme, dmp, -1)
+    #     dmp.close()
 
-        # import pickle
-        # with open("mARp.dump", "rb") as f:
-        # lm = pickle.load(f)
+    #     # import pickle
+    #     # with open("mARp.dump", "rb") as f:
+    #     # lm = pickle.load(f)
 
-    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1): ###########  RUN
+    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70): ###########  RUN
+        """
+        hist_timescale_ms  rough timescale of the post-spike history, counted from 10th percentile ISI
+        """
         oo     = self    #  call self oo.  takes up less room on line
         oo.Cs          = len(oo.freq_lims)
         oo.C           = oo.Cn + oo.Cs
@@ -514,7 +534,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.s2_x00       = _arl.dcyCovMat(oo.k, _N.ones(oo.k), 0.4)
         oo.restarts = 0
 
-        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5, multiply_shape_hyperparam=multiply_shape_hyperparam, multiply_scale_hyperparam=multiply_scale_hyperparam)
+        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5, multiply_shape_hyperparam=multiply_shape_hyperparam, multiply_scale_hyperparam=multiply_scale_hyperparam, hist_timescale_ms=hist_timescale_ms)
         oo.setParams()
 
         t1    = _tm.time()
