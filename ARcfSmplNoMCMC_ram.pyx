@@ -11,6 +11,7 @@ from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff
 #import ARcfSmplFuncsCy as ac
 import matplotlib.pyplot as _plt
 import time as _tm
+from libc.math cimport sqrt
 
 ujs = None
 wjs = None
@@ -24,6 +25,7 @@ H      = None
 iH     = None
 mu     = None
 J      = None
+Ji      = None
 Mj     = None
 Mji    = None
 mj     = None
@@ -33,7 +35,7 @@ arInd  = None
 
 def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
     cdef int C = Cs + Cn
-    global ujs, wjs, Ff, F0, F1, A, Xs, Ys, H, iH, mu, J, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
+    global ujs, wjs, Ff, F0, F1, A, Xs, Ys, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
     print("INIT ARcfSmplNoMCMC_ram")
     ujs     = _N.empty((TR, R, N + 1, 1))
     wjs     = _N.empty((TR, C, N + 2, 1))
@@ -47,6 +49,7 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
     iH     = _N.empty((TR, 2, 2))
     mu     = _N.empty((TR, 2, 1))
     J      = _N.empty((2, 2))
+    Ji      = _N.empty((2, 2))
     Mj     = _N.empty(TR)
     Mji    = _N.empty(TR)
     mj     = _N.empty(TR)
@@ -59,11 +62,29 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
         arInd = _N.arange(C-1, -1, -1)
 
 
+def testtest():
+    global Ji
+
+    cdef double[:, ::1] vJi = Ji
+    cdef double* p_Ji = &vJi[0, 0]
+
+    hhh = _N.random.randn(2, 2, 2)
+
+    _N.copyto(Ji, _N.sum(hhh, axis=0))
+
+    print(Ji)
+    div = (p_Ji[0]*p_Ji[3]-p_Ji[1]*p_Ji[2])
+    #J   = _N.linalg.inv(Ji)
+    print("the divs")
+    print(div)
+    print((Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0]))
+
+    
 #def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, double[:, :, ::1] smpxU, double[:, :, ::1] smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
 def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
 # #def ARcfSmpl(int N, int k, double[:, ::1] AR2lims, double[:, :, ::1] smpxU, double[:, :, ::1] smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int TR, int sig_ph0L, int sig_ph0H):
 # #def ARcfSmpl(int TR, double[:, ::1] AR2lims, double[:, :, ::1] smpxU, double[:, :, ::1] smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
-    global ujs, wjs, Ff, F0, F1, A, Xs, Ys, H, iH, mu, J, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
+    global ujs, wjs, Ff, F0, F1, A, Xs, Ys, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
 
     ##ttt1 = _tm.time()
     cdef int C = Cs + Cn
@@ -79,6 +100,20 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     cdef double* p_ujs = &v_ujs[0, 0, 0, 0]
     cdef double[:, :, :, ::1] v_wjs = wjs
     cdef double* p_wjs = &v_wjs[0, 0, 0, 0]
+
+    # ES = _N.zeros(2)     #  einsum  output is shape (2, 1)
+    # cdef double[::1]    vES = ES
+    # cdef double* p_ES       = &vES[0]
+    # U  = _N.zeros(2)     #  einsum  output is shape (2, 1)
+    # cdef double[::1]    vU = U
+    # cdef double* p_U       = &vU[0]
+    ES = _N.zeros((2, 1))     #  einsum  output is shape (2, 1)
+    cdef double[:, ::1]    vES = ES
+    cdef double* p_ES       = &vES[0, 0]
+    U  = _N.zeros((2, 1))     #  einsum  output is shape (2, 1)
+    cdef double[:, ::1]    vU = U
+    cdef double* p_U       = &vU[0, 0]
+
     
     #  CONVENTIONS, DATA FORMAT
     #  x1...xN  (observations)   size N-1
@@ -97,6 +132,7 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
 
     ######  COMPLEX ROOTS.  Cannot directly sample the conditional posterior
 
+    #print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
     cdef double[:, ::1] vFf  = Ff
     cdef double* p_vFf  = &vFf[0, 0]
     cdef double[::1] vF0  = F0
@@ -120,6 +156,8 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     cdef double* p_mu = &vmu[0, 0, 0]
     cdef double[:, ::1] vJ = J
     cdef double* p_J = &vJ[0, 0]
+    cdef double[:, ::1] vJi = Ji
+    cdef double* p_Ji = &vJi[0, 0]
     cdef double[::1] vMj = Mj
     cdef double* p_Mj = &vMj[0]
     cdef double[::1] vMji = Mji
@@ -137,8 +175,10 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     cdef complex[::1] vfiltrootsR = filtrootsR
     cdef complex* p_vfiltrootsR = &vfiltrootsR[0]
 
-    cdef int c, j, ti, ni
+    cdef int c, j, ti, ni, ii, jj
     cdef double iH00, iH01, iH10, iH11, div
+    cdef double svPr1, svPr2, vPr1, vPr2
+
 
     #  r = sqrt(-1*phi_1)   0.25 = -1*phi_1   -->  phi_1 >= -0.25   gives r >= 0.5 for signal components   
 
@@ -146,7 +186,8 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     #ttt2a = 0
     #ttt2b = 0
 
-    for 0 <= c < C:
+    #for 0 <= c < C:
+    for C-1 >= c > -1:
     #for c in arInd:   #  Filtering signal root first drastically alters the strength of the signal root upon update sometimes.  
         # rprior = prior
         # if c >= Cs:
@@ -188,7 +229,7 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         #print(Frmj.shape)
 
         Ff[0, :]   = Frmj[::-1]
-        #for 0 <= ti < k - 1:
+        #for 0 <= ti < k - 1:m
         #    Ff[0, ti]   = Frmj[k-2-ti]#Frmj[::-1]
         #     #  Ff first element k-delay,  Prod{i neq j} (1 - alfa_i B)
 
@@ -217,9 +258,9 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
             ####   Needed for proposal density calculation
             #Ys[:, 0]    = wj[2:N, 0]
 
-            Ys[:]    = wjs[m, c, 2:N]
-            Xs[:, 0] = wjs[m, c, 1:N-1, 0]   # new old
-            Xs[:, 1] = wjs[m, c, 0:N-2, 0]
+            # Ys[:]    = wjs[m, c, 2:N]
+            # Xs[:, 0] = wjs[m, c, 1:N-1, 0]   # new old
+            # Xs[:, 1] = wjs[m, c, 0:N-2, 0]
 
             # print("compare 1111")
             # print(Ys[0:10])
@@ -239,11 +280,11 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
             # print(wjs[m, c, 1, 0])
             # print(p_wjs[(N+2)*m*C + (N+2)*c + 1])
 
-            # for 0 <= ni < N-2:
-            #     # wjs 
-            #     p_Ys[ni]    = p_wjs[(N+2)*C*m + (N+2)*c + 2+ni]
-            #     p_Xs[2*ni]    = p_wjs[(N+2)*C*m + (N+2)*c + ni]
-            #     p_Xs[2*ni+1]    = p_wjs[(N+2)*C*m + (N+2)*c + ni+1]
+            for 0 <= ni < N-2:
+                # wjs 
+                p_Ys[ni]    = p_wjs[(N+2)*C*m + (N+2)*c + 2+ni]
+                p_Xs[2*ni]    = p_wjs[(N+2)*C*m + (N+2)*c + ni+1]
+                p_Xs[2*ni+1]    = p_wjs[(N+2)*C*m + (N+2)*c + ni]
             # print("compare 2222")
             # print(Ys[0:10])
             # print(Xs[0:10, 0])
@@ -275,13 +316,39 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
             mu[m]        = _N.dot(H[m], _N.dot(Xs.T, Ys))/q2[m]
 
         #  
-        Ji  = _N.sum(iH, axis=0)
-        #J   = _N.linalg.inv(Ji)
-        J[0,0]=Ji[1,1]; J[1,1]=Ji[0,0];
-        J[1,0]=-Ji[1,0];J[0,1]=-Ji[0,1];
-        J         /= (Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0])
+        _N.copyto(Ji, _N.sum(iH, axis=0))
+        div = (p_Ji[0]*p_Ji[3]-p_Ji[1]*p_Ji[2])
+        p_J[0] = p_Ji[3] / div
+        p_J[3] = p_Ji[0] / div
+        p_J[1] = -p_Ji[1] / div
+        p_J[2] = -p_Ji[2] / div
 
-        U   = _N.dot(J, _N.einsum("tij,tjk->ik", iH, mu))
+        #J   = _N.linalg.inv(Ji)
+        #print("the divs-------------")
+        #print(div)
+        #print((Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0]))
+
+        # div = (Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0])
+        # J[0,0]=Ji[1,1]; J[1,1]=Ji[0,0];
+        # J[1,0]=-Ji[1,0];J[0,1]=-Ji[0,1];
+        # J         /= (Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0])
+
+        #  sum_{t, j) iH[m, i, j]*mu[t, j, k]
+
+        # for 0 <= ii < 2:
+        p_ES[0] = 0
+        p_ES[1] = 0
+        for 0 <= ii < 2:
+            for 0 <= m < TR:
+                for 0 <= jj < 2:
+                    p_ES[ii] += p_iH[4*m+2*ii+jj]*p_mu[2*m+jj]
+        #ES  = _N.einsum("tij,tjk->ik", iH, mu)
+
+        #U   = _N.dot(J, _N.einsum("tij,tjk->ik", iH, mu))
+        #  dot(2 x 2    2 x 1)
+        p_U[0] = p_J[0]*p_ES[0] + p_J[1]*p_ES[1]
+        p_U[1] = p_J[2]*p_ES[0] + p_J[3]*p_ES[1]
+        #U   = _N.dot(J, ES)
 
         #bBdd, iBdd, mags, vals = _arl.ARevals(U[:, 0])
         #print "U"
@@ -294,16 +361,21 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         # #  If posterior valid Gaussian    q2 x H - oNZ * prH00
 
         ###  This case is still fairly inexpensive.  
-        vPr1  = J[0, 0] - (J[0, 1]*J[0, 1])   / J[1, 1]   # known as Mj
-        vPr2  = J[1, 1]
-        svPr2 = _N.sqrt(vPr2)     ####  VECTORIZE
-        svPr1 = _N.sqrt(vPr1)
+        vPr1   = p_J[0] - (p_J[1]*p_J[1]) / p_J[3]
+        vPr2   = p_J[3]
+        svPr2  = sqrt(vPr2)
+        svPr1  = sqrt(vPr1)
+
+        # vPr1  = J[0, 0] - (J[0, 1]*J[0, 1])   / J[1, 1]   # known as Mj
+        # vPr2  = J[1, 1]
+        # svPr2 = _N.sqrt(vPr2)     ####  VECTORIZE
+        # svPr1 = _N.sqrt(vPr1)
 
         #b2Real = (U[1, 0] + 0.25*U[0, 0]*U[0, 0] > 0)
         ######  Initialize F0
 
-        mu1prp = U[1, 0]
-        mu0prp = U[0, 0]
+        mu1prp = p_U[1]
+        mu0prp = p_U[0]
 
         #tttB = _tm.time()
         #print "ph0L  %(L).4f  ph1L  %(H).4f   %(u).4f   %(s).4f" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s" : svPr2}
@@ -314,7 +386,7 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         # print(mu1prp)
         # print(svPr2)
         ph0j2 = _kd.truncnorm(a=ph0L, b=ph0H, u=mu1prp, std=svPr2)
-        r1    = _N.sqrt(-1*ph0j2)
+        r1    = sqrt(-1*ph0j2)
         mj0   = mu0prp + (J[0, 1] * (ph0j2 - mu1prp)) / J[1, 1]
         # print(",,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
         # print(p1a*r1)
@@ -324,17 +396,18 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
 
         ph0j1 = _kd.truncnorm(a=p1a*r1, b=p1b*r1, u=mj0, std=svPr1)
         #tttC = _tm.time()
-        A[0] = ph0j1; A[1] = ph0j2
+        #p_A[0] = ph0j1; p_A[1] = ph0j2
 
         #F0[0] = ph0j1; F0[1] = ph0j2
 
         #  F1 +/- sqrt(F1^2 + 4F1) / 
-        img        = _N.sqrt(-(A[0]*A[0] + 4*A[1]))*1j
+        #img        = sqrt(-(p_A[0]*p_A[0] + 4*p_A[1]))*1j
+        img        = sqrt(-(ph0j1*ph0j1 + 4*ph0j2))*1j
         #vals, vecs = _N.linalg.eig(_N.array([A, [1, 0]]))
             
         #  the positive root comes first
-        valpC[j-1] = (A[0] - img)*0.5
-        valpC[j]   = (A[0] + img)*0.5
+        p_valpC[j-1] = (ph0j1 - img)*0.5
+        p_valpC[j]   = (ph0j1 + img)*0.5
         #alpC.insert(j-1, (A[0] - img)*0.5)     #alpC.insert(j - 1, jth_r1)
         #alpC.insert(j-1, (A[0] + img)*0.5)     #alpC.insert(j - 1, jth_r2)
         #tttC = _tm.time()
@@ -351,13 +424,13 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         #jth_r = alpR.pop(j)
 
         for ii in range(C):
-            filtrootsR[2*ii] = valpC[2*ii]
-            filtrootsR[2*ii+1] = valpC[2*ii+1]
+            p_vfiltrootsR[2*ii] = p_valpC[2*ii]
+            p_vfiltrootsR[2*ii+1] = p_valpC[2*ii+1]
         iif = -1
         for ii in range(R):
             if ii != j:
                 iif += 1
-                filtrootsR[iif+2*C] = valpR[ii]
+                p_vfiltrootsR[iif+2*C] = p_valpR[ii]
 
         #print("R !!!!")
         #print(alpR + alpC)
@@ -381,8 +454,8 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
             mj[m] = _N.dot(ujs[m, j, 1:, 0], ujs[m, j, 0:N, 0]) / (q2[m]*Mji[m])
 
         #  truncated Gaussian to [-1, 1]
-        Ji = _N.sum(Mji)
-        JR  = 1 / Ji
+        JiR = _N.sum(Mji)
+        JR  = 1 / JiR
         U  = JR * _N.dot(Mji, mj)
 
         #  we only want 
