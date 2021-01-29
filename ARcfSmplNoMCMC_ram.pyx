@@ -80,10 +80,7 @@ def testtest():
     print((Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0]))
 
     
-#def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, double[:, :, ::1] smpxU, double[:, :, ::1] smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
 def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
-# #def ARcfSmpl(int N, int k, double[:, ::1] AR2lims, double[:, :, ::1] smpxU, double[:, :, ::1] smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int TR, int sig_ph0L, int sig_ph0H):
-# #def ARcfSmpl(int TR, double[:, ::1] AR2lims, double[:, :, ::1] smpxU, double[:, :, ::1] smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
     global ujs, wjs, Ff, F0, F1, A, Xs, Ys, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
 
     ##ttt1 = _tm.time()
@@ -175,10 +172,13 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     cdef complex[::1] vfiltrootsR = filtrootsR
     cdef complex* p_vfiltrootsR = &vfiltrootsR[0]
 
-    cdef int c, j, ti, ni, ii, jj
-    cdef double iH00, iH01, iH10, iH11, div
+    cdef int c, j, ti, ni, ii, jj, iif, m
+    cdef double iH00, iH01, iH10, iH11, div, idiv
     cdef double svPr1, svPr2, vPr1, vPr2
+    cdef double JR, JiR, UR, tot, iq2, r1, ph0j1, ph0j2, rj
+    cdef complex img
 
+    iq2 = 1./p_q2[0]
 
     #  r = sqrt(-1*phi_1)   0.25 = -1*phi_1   -->  phi_1 >= -0.25   gives r >= 0.5 for signal components   
 
@@ -188,11 +188,6 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
 
     #for 0 <= c < C:
     for C-1 >= c > -1:
-    #for c in arInd:   #  Filtering signal root first drastically alters the strength of the signal root upon update sometimes.  
-        # rprior = prior
-        # if c >= Cs:
-        #    rprior = _cd.__COMP_REF__
-        #tttA = _tm.time()
         if c >= Cs:
             ph0L = -1
             ph0H = 0
@@ -223,10 +218,6 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         #     #Frmj = _Npp.polyfromroots(alpR + alpC).real
         Frmj = _Npp.polyfromroots(filtrootsC).real
         
-        #print "ampAngRep"
-        #print ampAngRep(alpC)
-
-        #print(Frmj.shape)
 
         Ff[0, :]   = Frmj[::-1]
         #for 0 <= ti < k - 1:m
@@ -248,37 +239,9 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
             #     wjs[m, c, ti] = tot
             _N.dot(smpxW[m], Ff.T, out=wjs[m, c])
 
-            #print("---- these should be same value")
-            #print(wjs[m, c, 0, 0])
-            #print(p_wjs[(N+2)*m*C + (N+2)*c])
-            #         #_N.savetxt("%(2)d-%(1)d" % {"2" : aro, "1" : c}, wjs[m, c])
-            #         #_plt.figure(figsize=(15, 4))
-            #         #_plt.plot(wjs[m, c, 1000:1300])
-            
-            ####   Needed for proposal density calculation
-            #Ys[:, 0]    = wj[2:N, 0]
-
             # Ys[:]    = wjs[m, c, 2:N]
-            # Xs[:, 0] = wjs[m, c, 1:N-1, 0]   # new old
+            # Xs[:, 0] = wjs[m, c, 1:N-1, 0]   # This block
             # Xs[:, 1] = wjs[m, c, 0:N-2, 0]
-
-            # print("compare 1111")
-            # print(Ys[0:10])
-            # print(Xs[0:10, 0])
-            # print(Xs[0:10, 1])
-
-            # # ujs     = _N.empty((TR, R, N + 1))
-            # # wjs     = _N.empty((TR, C, N + 2))
-
-            # # Xs     = _N.empty((N-2, 2))
-            # # Ys     = _N.empty((N-2, 1))
-
-            # print("These vals same  1")
-            # print(wjs[m, c, 2, 0])
-            # print(p_wjs[(N+2)*m*C + (N+2)*c + 2])
-            # print("These vals same  2")
-            # print(wjs[m, c, 1, 0])
-            # print(p_wjs[(N+2)*m*C + (N+2)*c + 1])
 
             for 0 <= ni < N-2:
                 # wjs 
@@ -296,44 +259,29 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
             iH11 = 0
 
             for 0 <= ni < N-2:
-                #iH00 += Xs.T[ni, 0] * Xs[ni, 0]
-                #iH01 += Xs.T[ni, 0] * Xs[ni, 1]
-                #iH11 += Xs.T[ni, 1] * Xs[ni, 1]
                 iH00 += p_Xs[2*ni] * p_Xs[2*ni]
                 iH01 += p_Xs[2*ni] * p_Xs[2*ni+1]
                 iH11 += p_Xs[2*ni+1] * p_Xs[2*ni+1]
-            p_iH[m*4] = iH00 / p_q2[m]
-            p_iH[m*4+1] = iH01 / p_q2[m]
-            p_iH[m*4+2] = iH01 / p_q2[m]  #  symmetric
-            p_iH[m*4+3] = iH11 / p_q2[m]
+            p_iH[m*4] = iH00 * iq2
+            p_iH[m*4+1] = iH01 * iq2
+            p_iH[m*4+2] = iH01 * iq2
+            p_iH[m*4+3] = iH11 * iq2
 
             ####  H[m]        = _N.linalg.inv(iH[m])   #  aka A
-            div       = (iH[m,0,0]*iH[m,1,1]-iH[m,0,1]*iH[m,1,0])
-            p_H[4*m]  =p_iH[4*m+3] / div; 
-            p_H[4*m+3]=p_iH[4*m] / div;
-            p_H[4*m+1]=-p_iH[4*m+1] / div;
-            p_H[4*m+2]=-p_iH[4*m+1] / div;
-            mu[m]        = _N.dot(H[m], _N.dot(Xs.T, Ys))/q2[m]
+            idiv       = 1./(p_iH[4*m]*p_iH[4*m+3]-p_iH[4*m+1]*p_iH[4*m+2])
+            p_H[4*m]  =p_iH[4*m+3] * idiv; 
+            p_H[4*m+3]=p_iH[4*m] * idiv;
+            p_H[4*m+1]=-p_iH[4*m+1] * idiv;
+            p_H[4*m+2]=-p_iH[4*m+1] * idiv;
+            mu[m]        = _N.dot(H[m], _N.dot(Xs.T, Ys)) * iq2
 
         #  
         _N.copyto(Ji, _N.sum(iH, axis=0))
-        div = (p_Ji[0]*p_Ji[3]-p_Ji[1]*p_Ji[2])
-        p_J[0] = p_Ji[3] / div
-        p_J[3] = p_Ji[0] / div
-        p_J[1] = -p_Ji[1] / div
-        p_J[2] = -p_Ji[2] / div
-
-        #J   = _N.linalg.inv(Ji)
-        #print("the divs-------------")
-        #print(div)
-        #print((Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0]))
-
-        # div = (Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0])
-        # J[0,0]=Ji[1,1]; J[1,1]=Ji[0,0];
-        # J[1,0]=-Ji[1,0];J[0,1]=-Ji[0,1];
-        # J         /= (Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0])
-
-        #  sum_{t, j) iH[m, i, j]*mu[t, j, k]
+        idiv = 1./(p_Ji[0]*p_Ji[3]-p_Ji[1]*p_Ji[2])
+        p_J[0] = p_Ji[3] * idiv
+        p_J[3] = p_Ji[0] * idiv
+        p_J[1] = -p_Ji[1] * idiv
+        p_J[2] = -p_Ji[2] * idiv
 
         # for 0 <= ii < 2:
         p_ES[0] = 0
@@ -366,11 +314,6 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         svPr2  = sqrt(vPr2)
         svPr1  = sqrt(vPr1)
 
-        # vPr1  = J[0, 0] - (J[0, 1]*J[0, 1])   / J[1, 1]   # known as Mj
-        # vPr2  = J[1, 1]
-        # svPr2 = _N.sqrt(vPr2)     ####  VECTORIZE
-        # svPr1 = _N.sqrt(vPr1)
-
         #b2Real = (U[1, 0] + 0.25*U[0, 0]*U[0, 0] > 0)
         ######  Initialize F0
 
@@ -385,16 +328,16 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         # print(ph0H)
         # print(mu1prp)
         # print(svPr2)
-        ph0j2 = _kd.truncnorm(a=ph0L, b=ph0H, u=mu1prp, std=svPr2)
+        ph0j2 = _kd.truncnormC(a=ph0L, b=ph0H, u=mu1prp, std=svPr2)
         r1    = sqrt(-1*ph0j2)
-        mj0   = mu0prp + (J[0, 1] * (ph0j2 - mu1prp)) / J[1, 1]
+        mj0   = mu0prp + (p_J[1] * (ph0j2 - mu1prp)) / p_J[3]
         # print(",,,,,,,,,,,,,,,,,,,,,,,,,,,,,")
         # print(p1a*r1)
         # print(p1b*r1)
         # print(mj0)
         # print(svPr1)
 
-        ph0j1 = _kd.truncnorm(a=p1a*r1, b=p1b*r1, u=mj0, std=svPr1)
+        ph0j1 = _kd.truncnormC(a=p1a*r1, b=p1b*r1, u=mj0, std=svPr1)
         #tttC = _tm.time()
         #p_A[0] = ph0j1; p_A[1] = ph0j2
 
@@ -419,15 +362,18 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     # print(valpC)
     FfR  = _N.zeros((1, k))
     ######     REAL ROOTS.  Directly sample the conditional posterior
-    for j in range(R - 1, -1, -1):
+    #for j in range(R - 1, -1, -1):
+    for R-1 >= j > -1:    # range(R - 1, -1, -1):
         # given all other roots except the jth
         #jth_r = alpR.pop(j)
 
-        for ii in range(C):
+        #for ii in range(C):
+        for 0 <= ii < C:
             p_vfiltrootsR[2*ii] = p_valpC[2*ii]
             p_vfiltrootsR[2*ii+1] = p_valpC[2*ii+1]
         iif = -1
-        for ii in range(R):
+        #for ii in range(R):
+        for 0 <= ii < R:
             if ii != j:
                 iif += 1
                 p_vfiltrootsR[iif+2*C] = p_valpR[ii]
@@ -441,28 +387,42 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         ##########  CREATE FILTERED TIMESERIES   ###########
         ##########  Frmj is k x k, smpxU is (N+1) x k ######
 
-        for m in range(TR):
+        JiR = 0
+        tot = 0
+        for 0 <= m < TR:#for m in range(TR):
             #uj  = _N.dot(Ff, smpxU[m].T).T
             #_N.dot(Ff, smpxU[m].T, out=ujs[m, j])
             _N.dot(smpxU[m], FfR.T, out=ujs[m, j])
             #ujs.append(uj)
 
             ####   Needed for proposal density calculation
-            
-            Mji[m] = _N.dot(ujs[m, j, 0:N, 0], ujs[m, j, 0:N, 0]) / q2[m]
-            Mj[m] = 1 / Mji[m]
-            mj[m] = _N.dot(ujs[m, j, 1:, 0], ujs[m, j, 0:N, 0]) / (q2[m]*Mji[m])
 
+            #  Mji  size TR,    ujs size (TR, R, N + 1, 1)
+
+            p_Mji[m] = 0
+            p_mj[m]  = 0
+            #_N.dot(ujs[m, j, 0:N, 0], ujs[m, j, 0:N, 0]) / q2[m]
+            #mj[m] = _N.dot(ujs[m, j, 1:, 0], ujs[m, j, 0:N, 0])// (q2[m]*Mji[m])
+            for 0 <= ii < N:
+                p_Mji[m] += p_ujs[m*R*(N+1) + j*(N+1) + ii]*\
+                            p_ujs[m*R*(N+1) + j*(N+1) + ii]
+                p_mj[m]  += p_ujs[m*R*(N+1) + j*(N+1) + ii+1]*\
+                            p_ujs[m*R*(N+1) + j*(N+1) + ii]
+            p_Mji[m] *= iq2
+            p_mj[m]  /= (p_q2[m]*p_Mji[m])
+
+            JiR += p_Mji[m]
+            tot += p_Mji[m]*p_mj[m]
         #  truncated Gaussian to [-1, 1]
-        JiR = _N.sum(Mji)
+
         JR  = 1 / JiR
-        U  = JR * _N.dot(Mji, mj)
+        UR  = JR * tot
 
         #  we only want 
-        rj = _kd.truncnorm(a=-1, b=1, u=U, std=_N.sqrt(JR))
+        rj = _kd.truncnormC(-1., 1., UR, sqrt(JR))
 
         #alpR.insert(j, rj)
-        valpR[j] = rj
+        p_valpR[j] = rj
     #alpR[:] = valpR
     #alpC[:] = valpC
     #ttt3 = _tm.time()
