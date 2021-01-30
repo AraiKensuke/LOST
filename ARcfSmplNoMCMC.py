@@ -45,7 +45,8 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
     F1  = _N.zeros(2)
     A   = _N.empty(2)
 
-    Xs     = _N.empty((TR, N-2, 2))
+    #Xs     = _N.empty((TR, N-2, 2))
+    Xs     = _N.empty((N-2, 2))
     Ys     = _N.empty((N-2, 1))
     H      = _N.empty((TR, 2, 2))
     iH     = _N.empty((TR, 2, 2))
@@ -106,15 +107,19 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
             Ys[:]    = wjs[m, c, 2:N]
             #Ys          = Ys.reshape(N-2, 1)
             #Xs[m, :, 0] = wj[1:N-1, 0]   # new old
-            Xs[m, :, 0] = wjs[m, c, 1:N-1, 0]   # new old
+            #Xs[m, :, 0] = wjs[m, c, 1:N-1, 0]   # new old
+            Xs[:, 0] = wjs[m, c, 1:N-1, 0]   # new old
             #Xs[m, :, 1] = wj[0:N-2, 0]
-            Xs[m, :, 1] = wjs[m, c, 0:N-2, 0]
-            iH[m]       = _N.dot(Xs[m].T, Xs[m]) / q2[m]
+            #Xs[m, :, 1] = wjs[m, c, 0:N-2, 0]
+            Xs[:, 1] = wjs[m, c, 0:N-2, 0]
+            #iH[m]       = _N.dot(Xs[m].T, Xs[m]) / q2[m]
+            iH[m]       = _N.dot(Xs.T, Xs) / q2[m]
             #H[m]        = _N.linalg.inv(iH[m])   #  aka A
             H[m,0,0]=iH[m,1,1]; H[m,1,1]=iH[m,0,0];
             H[m,1,0]=-iH[m,1,0];H[m,0,1]=-iH[m,0,1];
             H[m]         /= (iH[m,0,0]*iH[m,1,1]-iH[m,0,1]*iH[m,1,0])
-            mu[m]        = _N.dot(H[m], _N.dot(Xs[m].T, Ys))/q2[m]
+            #mu[m]        = _N.dot(H[m], _N.dot(Xs[m].T, Ys))/q2[m]
+            mu[m]        = _N.dot(H[m], _N.dot(Xs.T, Ys))/q2[m]
 
         #  
         Ji  = _N.sum(iH, axis=0)

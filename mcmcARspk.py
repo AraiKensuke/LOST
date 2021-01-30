@@ -110,7 +110,7 @@ class mcmcARspk(mAR.mcmcAR):
         # if (self.noAR is not None) or (self.noAR == False):
         #     self.lfc         = _lfc.logerfc()
 
-    def loadDat(self, runDir, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70): #################  loadDat
+    def loadDat(self, runDir, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70, n_interior_knots=8): #################  loadDat
         oo = self
         hist_timescale = hist_timescale_ms*0.001
         bGetFP = False
@@ -238,7 +238,6 @@ class mcmcARspk(mAR.mcmcAR):
         #  hist_timescale in ms
         asymptote  = smallisi + int(hist_timescale / oo.dt)   #  100 ms
 
-        n_interior_knots = 8
         hist_interior_knots  = _N.empty(n_interior_knots)
         lin01 = _N.linspace(0, 1, n_interior_knots, endpoint=True)
         sqr01 = lin01**2
