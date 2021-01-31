@@ -6,46 +6,13 @@
 ##  Introduction
 The timing of spikes in a neural spike train are sometimes observed to fire preferentially at certain phases of oscillatory components of brain signals such as the LFP or EEG, ie may be said to have an oscillatory modulation.    However, the temporal relationship is not exact, and there exists considerable variability in the spike-phase relationship.  Because the spikes themselves are often temporally sparse, assessing whether the spike train has oscillatory modulation, is challenging.  Further, the oscillatory modulation may not be uniformly present throughout the entire experiment.  We therefore developed a method to detect and also infer the instantaneous phase of the oscillation in the spike train, and also detection for non-stationarity in the modulation of the spikes.
 
-##  Required packages
-numpy
+##  Run LOST on Google Colab directly by following links in this repository.
+_**LOST can be run entirely on Colab without having to download or install the software following the links in this repository**_.  We provide several example datasets and analysis results, as the inference results require some interpretation, and we use these examples to guide the user in these interpretations, and also allow modification and exploration of how changing certain parameters can affect the inferred oscillations.  Notebooks are found in the *Notebooks* directory above, as are the example data.  There is 
 
-matplotlib
+##  AR(p) innovation variance and post-spike history timescale
+The hyperparameters with the most influence on the fit are for the innovation variance of the p-th order AR process and the number and location and of knots used to fit the (fixed) post-spike history.  Generally, allowing the innovation variance to be too large can result in a model of spiking probability that is near 0 where there are no spikes, and nearly 1 at spike times, and a very long post-spike history timescale will cause the oscillation to be partly explained by the post-spike history.
 
-cython
+We first address the AR(p) innovation variance.  A large innovation variance can cause large fluctuations in the AR(p), coupled with a very negative offset, resulting in a probabilities that 
 
-LOST
-
-[patsy](https://patsy.readthedocs.io/en/latest/)   used for splines to describe trial-averaged effect
-
-[pyPG](https://github.com/AraiKensuke/pyPG)  Polya-Gamma random variables
-
-##  Recommended packages 
-[LOST_Results_exmplr](https://github.com/AraiKensuke/LOST_Results_exmplr)  run-script generator for LOST, as well as examples of a datafile and a HOWTO of how to run LOST and format input data.
-
-##  Setup
-LOST is written in python and cython, and requires python2.7, matplotlib, numpy, scipy, patsy and pyPG.  [pyPG](https://github.com/AraiKensuke/pyPG) is primarily written in C++ with python wrappers, and comes with its own python setup script, so please build it separately.
-
-Once pyPG is built, LOST can be built and installed.  LOST is mainly written in python, with 1 cython file.  Choosing a destination directory `$DESTDIR` and extract (doing the tar.gz case here)
-
-```
-cd $DESTDIR
-gunzip LOST-verX.tar.gz
-tar xf LOST-verX.tar
-cd LOST-verX
-python setup.py install
-```
-
-After install and build are successful, set the `$PYTHONPATH` in shell script so that LOST may be run from directories outside of the install directory.  In the case of bash or shell, add the line
-
-```
-PYTHONPATH=${PYTHONPATH}:${DESTDIR}/LOST-verX"
-```
-
-It is now recommended to obtain [LOST_Results_exmplr](https://github.com/AraiKensuke/LOST_Results_exmplr).  It will walk you through how to set up a LOST analysis.
-
-##  TODO
-As it stands, LOST is computationally expensive, and we might need an hour or so of sampling for inference to be made, depending on how much data there is and how strong the modulation to an oscillation is.  If its strong, LOST might find it immediately, and require a few minutes - however if weak, it may take a while for us to draw enough Gibbs samples to draw a conclusion.
-
-A significant bottle neck has been identified (inverting the covariance matrix for the forward filter in FFBS), which takes around 80% of the processing time, and a possible solution is to parallelization, since all the trials are independent.  However, this would require the use of a non-GIL matrix inversion function (currently GIL numpy.linalg.inv), we would need to go directly to LAPACK.  However, LAPACK is a bit tricky for novices to use directly, but we hope to implement this soon.
-
+Both the post-spike history and the oscillation explain the history dependence of spiking, but there is no definitive demaraction between these two.  We included the post-spike history to account for the refractory period, a property of the neuron and its membrane excitability itself - something that can be observed in isolated electrophysiological experiments.  The oscillation we believe to be a network effect.  The effect of the latter can be captured somewhat by the fixed post-spike history.  We assume that the post-spike history is a more stereotyped effect, and sufficiently described by a fixed function of time after the spike, while the oscillation has more variability
 
