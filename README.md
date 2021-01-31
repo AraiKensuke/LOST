@@ -9,10 +9,10 @@ The timing of spikes in a neural spike train are sometimes observed to fire pref
 ##  Run LOST on Google Colab directly by following links in this repository.
 _**LOST can be run entirely on Colab without having to download or install the software following the links in this repository**_.  We provide several example datasets and analysis results, as the inference results require some interpretation.  The examples will illustrate how to interpret the results, and also some guidelines in the choice of parameters that can affect the inferred oscillations.  Notebooks are found in the *Notebooks* directory above, as are the example data.  In particular, here are the parameters and settings that most influence the fit:
 
-* Item 1  **AR(p) innovation variance**
-Generally, allowing the innovation variance to be too large can result in a model of spiking probability that is near 0 where there are no spikes, and nearly 1 at spike times. The probability of observing a spike in the *t*th timebin is <img src="https://render.githubusercontent.com/render/math?math=p(y_t = 1) = \frac{\exp{x_t %2B o}}{1 %2B \exp{x_t %2B o}}">.  *x* is the oscillation at time *t* and *o* is the offset.  Because of the nonlinearity of the link function, if *x* has large fluctuations and *o* is a large, negative number, it is possible that the probability of a spike to be very near 1 only near the spikes, and near 0 everywhere else, even if *x* is a relatively smoothly varying signal in time.  To avoid this 
+* **1. AR(p) innovation variance**
+Generally, allowing the innovation variance to be too large can result in a model of spiking probability that is near 0 where there are no spikes, and nearly 1 at spike times. The probability of observing a spike in the *t*th timebin is <img src="https://render.githubusercontent.com/render/math?math=p(y_t = 1) = \frac{\exp(x_t %2B o)}{1 %2B \exp(x_t %2B o)}">.  *x* is the oscillation at time *t* and *o* is the offset.  Because of the nonlinearity of the link function, if *x* has large fluctuations and *o* is a large, negative number, it is possible that the probability of a spike to be very near 1 only near the spikes, and near 0 everywhere else, even if *x* is a relatively smoothly varying signal in time.  To avoid this 
 
-* Item 2  **Timescale and knot locations of the post-spike history dependence**
+* **2. Timescale and knot locations of the post-spike history dependence**
 , and a very long post-spike history timescale will cause the oscillation to be partly explained by the post-spike history
 We first address the AR(p) innovation variance.  
 
