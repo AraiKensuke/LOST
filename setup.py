@@ -25,7 +25,11 @@ incdir = [get_python_inc(plat_specific=1), numpy.get_include(), "pyPG/include/RN
 libdir = ['/usr/local/lib']
 
 ###  ARE WE RUNNING ON COLAB?
-RUN_ON_COLAB = 'google.colab' in sys.modules
+try:
+  import google.colab
+  RUN_ON_COLAB = True
+except:
+  RUN_ON_COLAB = False
 
 if RUN_ON_COLAB:
     os.environ["CC"]  = "/usr/bin/gcc"   
