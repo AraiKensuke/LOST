@@ -22,10 +22,15 @@ modules = ["kfARlibMPmv_ram2", "kfARlibMPmv_ram3", "kfcomMPmv_ram", "kfARlib1c",
 #  to specify compiler, maybe set CC environment variable
 #  or python setup.py build --compiler=g++
 incdir = [get_python_inc(plat_specific=1), numpy.get_include(), "pyPG/include/RNG"]
-#libdir = ['/usr/local/lib/gcc/8', '/usr/local/lib']
 libdir = ['/usr/local/lib']
-os.environ["CC"]  = "/usr/local/bin/gcc-6"
-#os.environ["CC"]  = "/usr/local/bin/gcc"
+
+###  ARE WE RUNNING ON COLAB?
+RUN_ON_COLAB = 'google.colab' in sys.modules
+
+if RUN_ON_COLAB:
+    os.environ["CC"]  = "/usr/bin/gcc"   
+else:
+    os.environ["CC"]  = "/usr/local/bin/gcc-6"
 
 ##  Handle OPENMP switch here
 
