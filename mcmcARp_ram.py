@@ -142,11 +142,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
         alpR   = oo.F_alfa_rep[0:oo.R]
         alpC   = oo.F_alfa_rep[oo.R:]
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print(oo.F_alfa_rep)
-        print("*****************************")
-        print(alpR)
-        print(alpC)
 
         BaS = _N.zeros(oo.N+1)#_N.empty(oo.N+1)
 
@@ -215,7 +210,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         for itrB in range(iterBLOCKS):
             it = itrB*oo.peek
             if it > 0:
-                print("it: %(it)d    mnStd  %(mnstd).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1]})
+                print("it: %(it)d    mnStd  %(mnstd).3f   fs  %(fs).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1], "fs" : oo.fs[it-1, 0]})
 
             #tttA = _tm.time()
             if interrupted:
@@ -244,10 +239,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                 if oo.dohist:
                     O = kpOws - oo.smpx[..., 2:, 0] - oo.us.reshape((ooTR, 1)) - BaS -  oo.knownSig
-                    if it == 2000:
-                        _N.savetxt("it2000.dat", O)
 
-                    iOf = vInds[0]   #  offset HcM index with RHS index.
                     #print(oo.ws)
 
                     # for i in vInds:

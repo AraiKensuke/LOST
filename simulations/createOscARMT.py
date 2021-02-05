@@ -37,6 +37,11 @@ def create(outdir):
     global dt, lambda2, rpsth, isis, us, csTR, etme, bGenOscUsingAR, f0VAR, f0, Bf, Ba, amp, amp_nz, dSA, dSF, psth, prbs, prbsWithHist, latst
     latst = _N.empty((TR, N))
     prbsWithHist = _N.empty((TR, N))
+    lowQs = []
+
+    if csTR is None:
+        csTR = _N.ones(TR)
+
     if bGenOscUsingAR:
         ARcoeff = _N.empty((nRhythms, 2))
         for n in range(nRhythms):
@@ -56,6 +61,17 @@ def create(outdir):
         stdf  = _N.std(x)   #  choice of 4 std devs to keep phase monotonically increasing
         x, y = createDataAR(100000, Ba, sig, sig)
         stda  = _N.std(x)   #  choice of 4 std devs to keep phase monotonically increasing
+        stNzs   = _N.empty((TR, 1))
+        for tr in range(TR):
+            print("!!!!  %.2f" % lowQpc)
+            if _N.random.rand() < lowQpc:
+                lowQs.append(tr)
+                csTR[tr] = 0
+            else:
+                csTR[tr] = 1
+
+
+
 
 
     #  x, prbs, spks    3 columns
@@ -65,12 +81,9 @@ def create(outdir):
     probNOsc  = _N.empty((N, TR))
     spksPT  = _N.empty(TR)
 
-    lowQs   = []
     isis   = []
     rpsth  = []
 
-    if csTR is None:
-        csTR = _N.ones(TR)
     if etme is None:
         etme = _N.ones((TR, N))
     if us is None:
@@ -83,9 +96,10 @@ def create(outdir):
             #  psth is None.  Turn it off for now
             x, dN, prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, ARcoeff, us[tr], stNzs[tr], lambda2=lambda2, p=1, nRhythms=nRhythms, cs=csTR[tr], etme=etme[tr], offset=psth)
         else:
+            print("here 00000")
             xosc = createFlucOsc(f0, _N.array([f0VAR[tr]]), N, dt, 1, Bf=Bf, Ba=Ba, amp=amp, amp_nz=amp_nz, stdf=stdf, stda=stda, sig=sig, smoothKer=5, dSA=dSA, dSF=dSF) * etme[tr]  # sig is arbitrary, but we need to keep it same as when stdf, stda measured
             #x, dN, prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, None, psth + us[tr], None, lambda2=lambda2, p=1, nRhythms=1, cs=csTR[tr], etme=etme[tr], x=xosc[0])
-            x, dN, latst[tr], prbsWithHist[tr], fs, prbsNOsc = createDataPPl2(TR, N, dt, None, us[tr], None, lambda2=lambda2, p=1, nRhythms=1, cs=csTR[tr], etme=etme[tr], x=xosc, offset=psth)
+            x, dN, latst[tr], prbsWithHist[tr], fs, prbsNOsc = createDataPPl2(TR, N, dt, None, us[tr], stNzs[tr], lambda2=lambda2, p=1, nRhythms=1, cs=csTR[tr], etme=etme[tr], x=xosc, offset=psth)
 
         spksPT[tr] = _N.sum(dN)
         rpsth.extend(_N.where(dN == 1)[0])
@@ -138,6 +152,7 @@ def create(outdir):
     #_N.savetxt(resFN("lambda2db.dat", dir=setname), lambda2db, fmt="%.7f")
     #_plt.ion()
 
+    print(lowQs)
     if lowQpc > 0:
-        _N.savetxt(resFN("lowQtrials", dir=setname), lowQs, fmt="%d")
+        _N.savetxt("%(od)s/lowQtrials" % {"od" : outdir}, lowQs, fmt="%d")
 

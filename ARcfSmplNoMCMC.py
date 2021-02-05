@@ -154,7 +154,26 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
 
         tttB = _tm.time()
         #print "ph0L  %(L).4f  ph1L  %(H).4f   %(u).4f   %(s).4f" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s" : svPr2}
-        #print "vPr1  %(1).4e  vPr2 %(2).4e" % {"1" : vPr1, "2" : vPr2}
+
+
+        if _N.isnan(mu1prp) or _N.isnan(svPr2):
+            print("ph0L  %(L).4f  ph1L  %(H).4f   %(u).4f   %(s).4f" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s" : svPr2})
+            print("Ff---")
+            print(Ff)
+            print("alpC---")
+            print(alpC)
+            print("alpR---")
+            print(alpR)
+            print("q2")
+            print(q2[0])
+            print("H")
+            print(H)
+            print("Xs")
+            print(Xs)
+            print("Ys")
+            print(Ys)
+
+        #print "vPr1  %(1).4e  vPr2 %(2).4e" % {"1" : vPr1, "2" : vPr2}            
         ph0j2 = _kd.truncnorm(a=ph0L, b=ph0H, u=mu1prp, std=svPr2)
         r1    = _N.sqrt(-1*ph0j2)
         mj0   = mu0prp + (J[0, 1] * (ph0j2 - mu1prp)) / J[1, 1]

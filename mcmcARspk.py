@@ -377,6 +377,8 @@ class mcmcARspk(mAR.mcmcAR):
         oo.smpx        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k))   #  start at 0 + u
         oo.ws          = _N.empty((oo.TR, oo.N+1), dtype=_N.float)
 
+        #############   ADDED THIS FOR DEBUG
+        oo.F_alfa_rep = _N.array([-0.4       +0.j,          0.96999828+0.00182841j,  0.96999828-0.00182841j, 0.51000064+0.02405102j,  0.51000064-0.02405102j,  0.64524011+0.04059507j, 0.64524011-0.04059507j]).tolist()
         if oo.F_alfa_rep is None:
             oo.F_alfa_rep  = initF(oo.R, oo.Cs, oo.Cn, ifs=oo.ifs).tolist()   #  init F_alfa_rep
 
@@ -588,27 +590,29 @@ class mcmcARspk(mAR.mcmcAR):
         if pcklme is None:
             pcklme = {}
 
-        toiter         = oo.last_iter if (toiter is None) else toiter
+        toiter         = oo.last_iter+1 if (toiter is None) else toiter
         if oo.bpsth:
-            pcklme["aS"]   = oo.smp_aS[0:toiter]  #  this is last
+            pcklme["aS"]   = oo.smp_aS[0:toiter//oo.BsmpxSkp]  #  this is last
         pcklme["frm"]    = frm
         pcklme["evry"]    = oo.evry
         pcklme["B"]    = oo.B
-        pcklme["q2"]   = oo.smp_q2[:, 0:toiter]
-        pcklme["amps"] = oo.amps[0:toiter]
-        pcklme["fs"]   = oo.fs[0:toiter]
-        pcklme["u"]    = oo.smp_u[:, 0:toiter]
-        pcklme["mnStds"]= oo.mnStds[0:toiter]
-        pcklme["allalfas"]= oo.allalfas[0:toiter]
+        pcklme["BsmpxSkp"]    = oo.BsmpxSkp
+        pcklme["toiter"]      = toiter // oo.BsmpxSkp
+        pcklme["q2"]   = oo.smp_q2[:, 0:toiter//oo.BsmpxSkp]
+        pcklme["amps"] = oo.amps[0:toiter//oo.BsmpxSkp]
+        pcklme["fs"]   = oo.fs[0:toiter//oo.BsmpxSkp]
+        pcklme["u"]    = oo.smp_u[:, 0:toiter//oo.BsmpxSkp]
+        pcklme["mnStds"]= oo.mnStds[0:toiter//oo.BsmpxSkp]
+        pcklme["allalfas"]= oo.allalfas[0:toiter//oo.BsmpxSkp]
         pcklme["smpx"] = oo.smpx
         pcklme["ws"]   = oo.ws
         pcklme["t0_is_t_since_1st_spk"] = oo.t0_is_t_since_1st_spk
         if oo.Hbf is not None:
-            pcklme["spkhist"] = oo.smp_hist[:, 0:toiter]
+            pcklme["spkhist"] = oo.smp_hist[:, 0:toiter//oo.BsmpxSkp]
             pcklme["Hbf"]    = oo.Hbf
-            pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter]
+            pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter//oo.BsmpxSkp]
         if oo.doBsmpx:
-            pcklme["Bsmpx"]    = oo.Bsmpx[0:toiter//oo.BsmpxSkp]
+            pcklme["Bsmpx"]    = oo.Bsmpx[:, 0:toiter//oo.BsmpxSkp]
 
         #cifs = _N.empty((oo.TR, oo.N
         #for it 
