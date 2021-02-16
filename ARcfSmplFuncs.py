@@ -2,7 +2,7 @@
 import numpy as _N
 import scipy.stats as _ss
 
-def ampAngRep(z, sp="\n", f_order=False):
+def ampAngRep(z, dt, sp="\n", f_order=False):
     #  if f_order=True, give me rank of each element (in ascending order)
     #  if f=3, 9, 1, 200 Hz  
     #  return me (2, 0, 1, 3)  _ss.rankdata
@@ -27,7 +27,7 @@ def ampAngRep(z, sp="\n", f_order=False):
                     cStr = "R"
 
             if ((cStr == "C") and (ang < _N.pi)) and (ang != 0):
-                prt += "C  [%(r) .2f,  %(fa).3f]%(sp)s" % {"r" : r, "fa" : (ang / _N.pi), "t" : cStr, "sp" : sp}
+                prt += "C  [%(r) .2f,  %(fa).3f]%(sp)s" % {"r" : r, "fa" : (0.5*(ang / _N.pi)) / dt, "t" : cStr, "sp" : sp}
                 fs.append(ang / _N.pi)
                 amps.append(r)
             elif cStr == "R":

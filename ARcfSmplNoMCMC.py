@@ -240,7 +240,7 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
     # print("ttt2b  %.4f" % ttt2b)
 
 
-    #return ujs, wjs#, lsmpld
+    return ujs, wjs#, lsmpld
 
 
 def FilteredTimeseries(N, k, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR):

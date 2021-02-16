@@ -108,6 +108,8 @@ class mcmcARpBM2(mARspk.mcmcARspk):
         ooNMC       = oo.NMC
         ooN         = oo.N
 
+        print(oo.smpx[0, 2:, 0])
+
         oo.allocateSmp(oo.burn + oo.NMC)
         oo.x00         = _N.array(oo.smpx[:, 2])
         oo.V00         = _N.zeros((ooTR, ook, ook))

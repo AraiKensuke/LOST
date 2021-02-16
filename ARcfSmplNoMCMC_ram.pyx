@@ -12,13 +12,13 @@ from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff
 import matplotlib.pyplot as _plt
 import time as _tm
 from libc.math cimport sqrt
+cimport cython
+
 
 ujs = None
 wjs = None
 Ff  = None
 F0  = None
-F1  = None
-A   = None
 Xs     = None
 Ys     = None
 H      = None
@@ -32,71 +32,110 @@ mj     = None
 filtrootsC = None
 filtrootsR = None
 arInd  = None
+ES     = None
+U      = None
+XsYs   = None
 
+cdef double *p_Xs, *p_Ys, *p_H, *p_iH, *p_mu, *p_J, *p_Ji, *p_Mji, *p_mj, *p_ujs, *p_wjs, *p_ES, *p_U, *p_Ff, *p_F0, *p_XsYs
+cdef complex *p_vfiltrootsC, *p_vfiltrootsR
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
-    cdef int C = Cs + Cn
-    global ujs, wjs, Ff, F0, F1, A, Xs, Ys, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
+    global ujs, wjs, Ff, F0, A, Xs, Ys, XsYs, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd, ES, U
+    global p_Xs, p_Ys, p_XsYs, p_H, p_iH, p_mu, p_J, p_Ji, p_Mji, p_mj, p_ujs, p_wjs, p_ES, p_U, p_Ff, p_F0
+    global p_vfiltrootsC, p_vfiltrootsR
     print("INIT ARcfSmplNoMCMC_ram")
+    cdef int C = Cs + Cn
+
     ujs     = _N.empty((TR, R, N + 1, 1))
     wjs     = _N.empty((TR, C, N + 2, 1))
+    cdef double[:, :, :, ::1] v_ujs = ujs
+    p_ujs = &v_ujs[0, 0, 0, 0]
+    cdef double[:, :, :, ::1] v_wjs = wjs
+    p_wjs = &v_wjs[0, 0, 0, 0]
+
     Ff  = _N.zeros((1, k-1))
     F0  = _N.zeros(2)
-    F1  = _N.zeros(2)
-    A   = _N.empty(2)
+    cdef double[:, ::1] vFf  = Ff
+    p_Ff  = &vFf[0, 0]
+    cdef double[::1] vF0  = F0
+    p_F0  = &vF0[0]
+
     Xs     = _N.empty((N-2, 2))
     Ys     = _N.empty((N-2, 1))
+    XsYs   = _N.empty((2, 1))
     H      = _N.empty((TR, 2, 2))
     iH     = _N.empty((TR, 2, 2))
     mu     = _N.empty((TR, 2, 1))
+
+    cdef double[:, ::1] vXs = Xs
+    p_Xs = &vXs[0, 0]
+    cdef double[:, ::1] vYs = Ys
+    p_Ys = &vYs[0, 0]
+    cdef double[:, ::1] vXsYs = XsYs
+    p_XsYs = &vXsYs[0, 0]
+
+    cdef double[:, :, ::1] vH = H
+    p_H = &vH[0, 0, 0]
+    cdef double[:, :, ::1] viH = iH
+    p_iH = &viH[0, 0, 0]
+    cdef double[:, :, ::1] vmu = mu
+    p_mu = &vmu[0, 0, 0]
+
     J      = _N.empty((2, 2))
     Ji      = _N.empty((2, 2))
-    Mj     = _N.empty(TR)
     Mji    = _N.empty(TR)
     mj     = _N.empty(TR)
+
+    cdef double[:, ::1] vJ = J
+    p_J = &vJ[0, 0]
+    cdef double[:, ::1] vJi = Ji
+    p_Ji = &vJi[0, 0]
+    cdef double[::1] vMji = Mji
+    p_Mji = &vMji[0]
+    cdef double[::1] vmj = mj
+    p_mj = &vmj[0]
+
     filtrootsC = _N.empty(2*C-2+R, dtype=_N.complex)
     filtrootsR = _N.empty(2*C+R-1, dtype=_N.complex)
+    cdef complex[::1] vfiltrootsC = filtrootsC
+    p_vfiltrootsC = &vfiltrootsC[0]
+    cdef complex[::1] vfiltrootsR = filtrootsR
+    p_vfiltrootsR = &vfiltrootsR[0]
+
 
     if aro == _cd.__SF__:    #  signal first
         arInd = _N.arange(C)
     else:                    #  noise first
         arInd = _N.arange(C-1, -1, -1)
 
+    ES = _N.zeros((2, 1))     #  einsum  output is shape (2, 1)
+    cdef double[:, ::1]    vES = ES
+    p_ES       = &vES[0, 0]
+    U  = _N.zeros((2, 1))     #  einsum  output is shape (2, 1)
+    cdef double[:, ::1]    vU = U
+    p_U       = &vU[0, 0]
 
-def testtest():
-    global Ji
 
-    cdef double[:, ::1] vJi = Ji
-    cdef double* p_Ji = &vJi[0, 0]
-
-    hhh = _N.random.randn(2, 2, 2)
-
-    _N.copyto(Ji, _N.sum(hhh, axis=0))
-
-    print(Ji)
-    div = (p_Ji[0]*p_Ji[3]-p_Ji[1]*p_Ji[2])
-    #J   = _N.linalg.inv(Ji)
-    print("the divs")
-    print(div)
-    print((Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0]))
-
-    
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
 def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
-    global ujs, wjs, Ff, F0, F1, A, Xs, Ys, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
+    global ujs, wjs, Ff, F0, Xs, Ys, XsYs, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
+    global p_vfiltrootsC, p_vfiltrootsR
+
+    global p_Xs, p_Ys, p_H, p_iH, p_mu, p_J, p_Ji, p_Mji, p_mj, p_ujs, p_wjs, p_ES, p_U, p_Ff, p_F0
 
     ##ttt1 = _tm.time()
     cdef int C = Cs + Cn
 
     #  I return F and Eigvals
-
+    
+    cdef double[:, :, ::1] v_smpxU = smpxU
     cdef double[:, :, ::1] v_smpxW = smpxW
     cdef double* p_smpxW = &v_smpxW[0, 0, 0]
-    cdef double[:, :, ::1] v_smpxU = smpxU
     cdef double* p_smpxU = &v_smpxU[0, 0, 0]
-
-    cdef double[:, :, :, ::1] v_ujs = ujs
-    cdef double* p_ujs = &v_ujs[0, 0, 0, 0]
-    cdef double[:, :, :, ::1] v_wjs = wjs
-    cdef double* p_wjs = &v_wjs[0, 0, 0, 0]
 
     # ES = _N.zeros(2)     #  einsum  output is shape (2, 1)
     # cdef double[::1]    vES = ES
@@ -104,12 +143,6 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     # U  = _N.zeros(2)     #  einsum  output is shape (2, 1)
     # cdef double[::1]    vU = U
     # cdef double* p_U       = &vU[0]
-    ES = _N.zeros((2, 1))     #  einsum  output is shape (2, 1)
-    cdef double[:, ::1]    vES = ES
-    cdef double* p_ES       = &vES[0, 0]
-    U  = _N.zeros((2, 1))     #  einsum  output is shape (2, 1)
-    cdef double[:, ::1]    vU = U
-    cdef double* p_U       = &vU[0, 0]
 
     
     #  CONVENTIONS, DATA FORMAT
@@ -130,47 +163,13 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     ######  COMPLEX ROOTS.  Cannot directly sample the conditional posterior
 
     #print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-    cdef double[:, ::1] vFf  = Ff
-    cdef double* p_vFf  = &vFf[0, 0]
-    cdef double[::1] vF0  = F0
-    cdef double* p_vF0  = &vF0[0]
 
-    cdef double[::1] vF1  = F1
-    cdef double* p_vF1  = &vF1[0]
-
-    cdef double[::1] vA  = A
-    cdef double* p_vA  = &vA[0]
-
-    cdef double[:, ::1] vXs = Xs
-    cdef double* p_Xs = &vXs[0, 0]
-    cdef double[:, ::1] vYs = Ys
-    cdef double* p_Ys = &vYs[0, 0]
-    cdef double[:, :, ::1] vH = H
-    cdef double* p_H = &vH[0, 0, 0]
-    cdef double[:, :, ::1] viH = iH
-    cdef double* p_iH = &viH[0, 0, 0]
-    cdef double[:, :, ::1] vmu = mu
-    cdef double* p_mu = &vmu[0, 0, 0]
-    cdef double[:, ::1] vJ = J
-    cdef double* p_J = &vJ[0, 0]
-    cdef double[:, ::1] vJi = Ji
-    cdef double* p_Ji = &vJi[0, 0]
-    cdef double[::1] vMj = Mj
-    cdef double* p_Mj = &vMj[0]
-    cdef double[::1] vMji = Mji
-    cdef double* p_Mji = &vMji[0]
-    cdef double[::1] vmj = mj
-    cdef double* p_mj = &vmj[0]
     cdef double* p_q2 = &q2[0]
     cdef double* p_AR2lims = &AR2lims[0, 0]
 
     cdef complex* p_valpC = &valpC[0]
     cdef complex* p_valpR = &valpR[0]
 
-    cdef complex[::1] vfiltrootsC = filtrootsC
-    cdef complex* p_vfiltrootsC = &vfiltrootsC[0]
-    cdef complex[::1] vfiltrootsR = filtrootsR
-    cdef complex* p_vfiltrootsR = &vfiltrootsR[0]
 
     cdef int c, j, ti, ni, ii, jj, iif, m
     cdef double iH00, iH01, iH10, iH11, div, idiv
@@ -227,6 +226,10 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         #     ##########  CREATE FILTERED TIMESERIES   ###########
         #     ##########  Frmj is k x k, smpxW is (N+2) x k ######
 
+        p_Ji[0] = 0
+        p_Ji[1] = 0
+        p_Ji[2] = 0
+        p_Ji[3] = 0
         for 0 <= m < TR:
             # print("SHAPES SHAPES SHAPES SHAPES")
             # print(smpxW[m].shape)
@@ -234,7 +237,7 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
             # print(wjs[m, c].shape)
             # for 0 <= ti < N:
             #     tot = 0
-            #     for 0 <= ki < k:
+            #     for 0 <= ki < k-1:
             #         tot += p_Ff[k]*p_smpxW[m*N+ k]
             #     wjs[m, c, ti] = tot
             _N.dot(smpxW[m], Ff.T, out=wjs[m, c])
@@ -267,16 +270,35 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
             p_iH[m*4+2] = iH01 * iq2
             p_iH[m*4+3] = iH11 * iq2
 
+            p_Ji[0] += p_iH[m*4]
+            p_Ji[1] += p_iH[m*4+1]
+            p_Ji[2] += p_iH[m*4+2]
+            p_Ji[3] += p_iH[m*4+3]
             ####  H[m]        = _N.linalg.inv(iH[m])   #  aka A
             idiv       = 1./(p_iH[4*m]*p_iH[4*m+3]-p_iH[4*m+1]*p_iH[4*m+2])
             p_H[4*m]  =p_iH[4*m+3] * idiv; 
             p_H[4*m+3]=p_iH[4*m] * idiv;
             p_H[4*m+1]=-p_iH[4*m+1] * idiv;
             p_H[4*m+2]=-p_iH[4*m+1] * idiv;
-            mu[m]        = _N.dot(H[m], _N.dot(Xs.T, Ys)) * iq2
 
+            #Xs     = _N.empty((N-2, 2))
+            #Ys     = _N.empty((N-2, 1))
+            p_XsYs[0] = 0
+            p_XsYs[1] = 0
+            for 0 <= ti < N-2:
+                p_XsYs[0] += p_Xs[2*ti]*p_Ys[ti]
+                p_XsYs[1] += p_Xs[2*ti+1]*p_Ys[ti]
+            #mu     = _N.empty((TR, 2, 1))
+            p_mu[2*m]     = (p_H[4*m]  *p_XsYs[0] + p_H[4*m+2]*p_XsYs[1])*iq2
+            p_mu[2*m+1]   = (p_H[4*m+1]*p_XsYs[0] + p_H[4*m+3]*p_XsYs[1])*iq2
+            #mu[m]        = _N.dot(H[m], _N.dot(Xs.T, Ys)) * iq2
+            #mu[m]        = _N.dot(H[m], XsYs) * iq2
+            
+            
         #  
-        _N.copyto(Ji, _N.sum(iH, axis=0))
+
+        #iH     = _N.empty((TR, 2, 2))
+        #_N.copyto(Ji, _N.sum(iH, axis=0))
         idiv = 1./(p_Ji[0]*p_Ji[3]-p_Ji[1]*p_Ji[2])
         p_J[0] = p_Ji[3] * idiv
         p_J[3] = p_Ji[0] * idiv

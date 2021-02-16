@@ -12,25 +12,16 @@ import time as _tm
 import LOST.ARlib as _arl
 import LOST.kfARlibMPmv_ram2 as _kfar
 import pyPG as lw
-
-import LOST.ARcfSmplNoMCMC as _arcfs
-#
+from LOST.ARcfSmplNoMCMC import ARcfSmpl
 #from ARcfSmpl2 import ARcfSmpl
 
 import commdefs as _cd
 
 from LOST.ARcfSmplFuncs import ampAngRep, buildLims, FfromLims, dcmpcff, initF
 import os
-import signal
 
 import LOST.mcmcARspk as mcmcARspk
 import LOST.monitor_gibbs as _mg
-
-interrupted = False
-def signal_handler(signal, frame):
-    global interrupted
-    print("******  INTERRUPT")
-    interrupted = True
 
 class mcmcARp(mcmcARspk.mcmcARspk):
     #  Description of model
@@ -62,7 +53,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
     #  Current values of params and state
     B             = None;    aS            = None; us             = None;    
 
-    #  coefficient samplingF
+    #  coefficient sampling
     fSigMax       = 500.    #  fixed parameters
     #freq_lims     = [[1 / .85, fSigMax]]
     freq_lims     = [[.1, fSigMax]]
@@ -77,13 +68,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
     ignr          = 0
 
-    
-
     def gibbsSamp(self):  ###########################  GIBBSSAMPH
-        global interrupted
         oo          = self
-
-        signal.signal(signal.SIGINT, signal_handler)
 
         print("****!!!!!!!!!!!!!!!!  dohist  %s" % str(oo.dohist))
 
@@ -95,7 +81,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.x00         = _N.array(oo.smpx[:, 2])
         oo.V00         = _N.zeros((ooTR, ook, ook))
         if oo.dohist:
-            oo.loghist = _N.zeros(oo.Hbf.shape[0])
+            oo.loghist = _N.zeros(oo.N+1)
         else:
             print("fixed hist is")
             print(oo.loghist)
@@ -139,7 +125,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         #runTO = ooNMC + oo.burn - 1 if (burns is None) else (burns - 1)
         runTO = oo.ITERS - 1
         oo.allocateSmp(runTO+1, Bsmpx=oo.doBsmpx)
-
         alpR   = oo.F_alfa_rep[0:oo.R]
         alpC   = oo.F_alfa_rep[oo.R:]
 
@@ -151,22 +136,37 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         RHS = _N.empty((oo.histknots, 1))
 
         print("-----------    histknots %d" % oo.histknots)
-        cInds = _N.arange(oo.iHistKnotBeginFixed, oo.histknots)
-        vInds = _N.arange(0, oo.iHistKnotBeginFixed)
-        #cInds = _N.array([4, 12, 13])
-        #vInds = _N.array([0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, ])
-        #vInds = _N.arange(0, oo.iHistKnotBeginFixed)
-
-        RHS[cInds, 0] = 0
+        if oo.h0_1 > 1:   #  no spikes in first few time bins
+            print("!!!!!!!   hist scenario 1")
+            #cInds = _N.array([0, 1, 5, 6, 7, 8, 9, 10])
+            #cInds = _N.array([0, 4, 5, 6, 7, 8, 9])
+            cInds = _N.array([0, 5, 6, 7, 8, 9])
+            #vInds = _N.array([2, 3, 4])
+            vInds = _N.array([1, 2, 3, 4])
+            RHS[cInds, 0] = 0
+            RHS[0, 0] = -5
+        elif oo.hist_max_at_0:   #  no refractory period
+            print("!!!!!!!   hist scenario 2")
+            #cInds = _N.array([5, 6, 7, 8, 9, 10])
+            cInds = _N.array([0, 4, 5, 6, 7, 8,])
+            vInds = _N.array([1, 2, 3])
+            #vInds = _N.array([0, 1, 2, 3, 4])
+            RHS[cInds, 0] = 0
+            RHS[0, 0] = 0
+        else:
+            print("!!!!!!!   hist scenario 3")
+            #cInds = _N.array([5, 6, 7, 8, 9, 10])
+            cInds = _N.array([4, 5, 6, 7, 8, 9,])
+            vInds = _N.array([0, 1, 2, 3, ])
+            #vInds = _N.array([0, 1, 2, 3, 4])
+            RHS[cInds, 0] = 0
 
         Msts = []
         for m in range(ooTR):
             Msts.append(_N.where(oo.y[m] == 1)[0])
-        HcM  = _N.ones((len(vInds), len(vInds)))
+        HcM  = _N.empty((len(vInds), len(vInds)))
 
         HbfExpd = _N.zeros((oo.histknots, ooTR, oo.N+1))
-
-        #HbfExpd = _N.zeros((oo.histknots, ooTR, oo.Hbf.shape[0]))
         #  HbfExpd is 11 x M x 1200
         #  find the mean.  For the HISTORY TERM
         for i in range(oo.histknots):
@@ -203,25 +203,17 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         iterBLOCKS  = oo.ITERS//oo.peek
         smpx_tmp = _N.empty((oo.TR, oo.N+1, oo.k))
 
-        #  oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1]
-        smpx_contiguous1        = _N.zeros((oo.TR, oo.N + 2, oo.k))
-        smpx_contiguous2        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k-1))
+
+        
         ######  Gibbs sampling procedure
-        ttts = _N.zeros((oo.ITERS, 9))
         for itrB in range(iterBLOCKS):
             it = itrB*oo.peek
             if it > 0:
-                #  0.5*oo.fs  because (dt*2)  ->  1 corresponds to Fs/2
-                print("it: %(it)d    mnStd  %(mnstd).3f   fs  %(fs).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1], "fs" : ((0.5*oo.fs[it-1, 0]) / (oo.dt))})
-                mnttt = _N.mean(ttts[0:it-1], axis=0)
-                for ti in range(9):
-                    print("t%(2)d-t%(1)d  %(ttt).4f" % {"1" : ti+1, "2" : ti+2, "ttt" : mnttt[ti]})
-                    
+                print("it: %(it)d    mnStd  %(mnstd).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1]})
 
-            if interrupted:
-                break
+            #tttA = _tm.time()
             for it in range(itrB*oo.peek, (itrB+1)*oo.peek):
-                ttt1 = _tm.time()
+                #ttt1 = _tm.time()
 
                 #  generate latent AR state
                 oo.f_x[:, 0]     = oo.x00
@@ -232,11 +224,11 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.f_V[:, 0]     = _N.mean(oo.f_V[:, 1:], axis=1)
 
                 ###  PG latent variable sample
-                ttt2 = _tm.time()
+                #ttt2 = _tm.time()
 
                 for m in range(ooTR):
                     lw.rpg_devroye(oo.rn, oo.smpx[m, 2:, 0] + oo.us[m] + BaS + ARo[m] + oo.knownSig[m], out=oo.ws[m])  ######  devryoe
-                ttt3 = _tm.time()
+                #ttt3 = _tm.time()
 
                 if ooTR == 1:
                     oo.ws   = oo.ws.reshape(1, ooN+1)
@@ -244,38 +236,26 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                 if oo.dohist:
                     O = kpOws - oo.smpx[..., 2:, 0] - oo.us.reshape((ooTR, 1)) - BaS -  oo.knownSig
+                    if it == 2000:
+                        _N.savetxt("it2000.dat", O)
 
+                    iOf = vInds[0]   #  offset HcM index with RHS index.
                     #print(oo.ws)
 
-                    # for i in vInds:
-                    #     #print("i   %d" % i)
-                    #     #print(_N.sum(HbfExpd[i]))
-                    #     for j in vInds:
-                    #         #print("j   %d" % j)
-                    #         #print(_N.sum(HbfExpd[j]))
-                    #         HcM[i-iOf, j-iOf] = _N.sum(oo.ws*HbfExpd[i]*HbfExpd[j])
-
-                    #     RHS[i, 0] = _N.sum(oo.ws*HbfExpd[i]*O)
-                    #     for cj in cInds:
-                    #         RHS[i, 0] -= _N.sum(oo.ws*HbfExpd[i]*HbfExpd[cj])*RHS[cj, 0]
-                    for ii in range(len(vInds)):
+                    for i in vInds:
                         #print("i   %d" % i)
                         #print(_N.sum(HbfExpd[i]))
-                        i = vInds[ii]
-                        for jj in range(len(vInds)):
-                            j = vInds[jj]
+                        for j in vInds:
                             #print("j   %d" % j)
                             #print(_N.sum(HbfExpd[j]))
-                            HcM[ii, jj] = _N.sum(oo.ws*HbfExpd[i]*HbfExpd[j])
+                            HcM[i-iOf, j-iOf] = _N.sum(oo.ws*HbfExpd[i]*HbfExpd[j])
 
-                        RHS[ii, 0] = _N.sum(oo.ws*HbfExpd[i]*O)
+                        RHS[i, 0] = _N.sum(oo.ws*HbfExpd[i]*O)
                         for cj in cInds:
-                            RHS[ii, 0] -= _N.sum(oo.ws*HbfExpd[i]*HbfExpd[cj])*RHS[cj, 0]
-                        
+                            RHS[i, 0] -= _N.sum(oo.ws*HbfExpd[i]*HbfExpd[cj])*RHS[cj, 0]
 
                     # print("HbfExpd..............................")
-                    # for i in range(oo.histknots):
-                    #     print(_N.sum(HbfExpd[i]))
+                    # print(HbfExpd)
                     # print("HcM..................................")
                     # print(HcM)
                     # print("RHS..................................")
@@ -288,17 +268,17 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     cfs = _N.random.multivariate_normal(vm[:, 0], Cov, size=1)
 
                     RHS[vInds,0] = cfs[0]
-                    oo.smp_hS[it] = RHS[:, 0]
+                    oo.smp_hS[:, it] = RHS[:, 0]
 
                     #RHS[2:6, 0] = vm[:, 0]
                     #vv = _N.dot(Hbf, RHS)
                     #print vv.shape
                     #print oo.loghist.shape
                     _N.dot(Hbf, RHS[:, 0], out=oo.loghist)
-                    oo.smp_hist[it] = oo.loghist
+                    oo.smp_hist[:, it] = oo.loghist
                     oo.stitch_Hist(ARo, oo.loghist, Msts)
                 else:
-                    oo.smp_hist[it] = oo.loghist
+                    oo.smp_hist[:, it] = oo.loghist
                     oo.stitch_Hist(ARo, oo.loghist, Msts)
 
                 #  Now that we have PG variables, construct Gaussian timeseries
@@ -308,7 +288,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                 # oo.gau_obs = kpOws - BaS - ARo - oous_rs - oo.knownSig
                 # oo.gau_var =1 / oo.ws   #  time dependent noise
-                ttt4 = _tm.time()
+                #ttt4 = _tm.time()
                 if oo.bpsth:
                     Oms  = kpOws - oo.smpx[..., 2:, 0] - ARo - oous_rs - oo.knownSig
                     _N.einsum("mn,mn->n", oo.ws, Oms, out=smWimOm)   #  sum over
@@ -318,9 +298,9 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     lm_f  = _N.dot(lv_f, smWimOm)  #  nondiag of 1./Bi are inf
                     #  now sample
                     iVAR = _N.dot(oo.B, _N.dot(ilv_f, oo.B.T)) + iD_f
-                    ttt4a = _tm.time()
+                    #ttt4a = _tm.time()
                     VAR  = _N.linalg.inv(iVAR)  #  knots x knots
-                    ttt4b = _tm.time()
+                    #ttt4b = _tm.time()
                     #iBDBW = _N.linalg.inv(BDB + lv_f)   # BDB not diag
                     #Mn    = oo.u_a + _N.dot(DB, _N.dot(iBDBW, lm_f - BTua))
 
@@ -331,10 +311,10 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     #t4c = _tm.time()
 
                     oo.aS   = _N.random.multivariate_normal(Mn, VAR, size=1)[0, :]
-                    oo.smp_aS[it] = oo.aS
+                    oo.smp_aS[it, :] = oo.aS
                     _N.dot(oo.B.T, oo.aS, out=BaS)
 
-                ttt5 = _tm.time()
+                #ttt5 = _tm.time()
                 ########     per trial offset sample  burns==None, only psth fit
                 Ons  = kpOws - oo.smpx[..., 2:, 0] - ARo - BaS - oo.knownSig
 
@@ -354,7 +334,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.us[:]  = _N.random.multivariate_normal(Mn, VAR, size=1)[0, :]
                     if not oo.bIndOffset:
                         oo.us[:] = _N.mean(oo.us)
-                    oo.smp_u[it] = oo.us
+                    oo.smp_u[:, it] = oo.us
                 else:
                     H    = _N.ones((oo.TR-1, oo.TR-1)) * _N.sum(oo.ws[0])
                     uRHS = _N.empty(oo.TR-1)
@@ -369,7 +349,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.us[0]  = -_N.sum(oo.us[1:])
                     if not oo.bIndOffset:
                         oo.us[:] = _N.mean(oo.us)
-                    oo.smp_u[it] = oo.us
+                    oo.smp_u[:, it] = oo.us
 
                 # Ons  = kpOws - ARo
                 # _N.einsum("mn,mn->m", oo.ws, Ons, out=smWinOn)  #  sum over trials
@@ -386,7 +366,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 #     oo.us[:] = _N.mean(oo.us)
                 # oo.smp_u[:, it] = oo.us
 
-                ttt6 = _tm.time()
+                #ttt6 = _tm.time()
                 if not oo.noAR:
                 #  _d.F, _d.N, _d.ks, 
                     #_kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, oo.smpx, K)
@@ -401,20 +381,17 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.smpx[:, 0, 0:ook-2]   = oo.smpx[:, 2, 2:]
 
                     if oo.doBsmpx and (it % oo.BsmpxSkp == 0):
-                        oo.Bsmpx[it // oo.BsmpxSkp, :, 2:]    = oo.smpx[:, 2:, 0]
+                        oo.Bsmpx[:, it // oo.BsmpxSkp, 2:]    = oo.smpx[:, 2:, 0]
                         #oo.Bsmpx[it // oo.BsmpxSkp, :, 2:]    = oo.smpx[:, 2:, 0]
                     stds = _N.std(oo.smpx[:, 2+oo.ignr:, 0], axis=1)
                     oo.mnStds[it] = _N.mean(stds, axis=0)
 
-                    ttt7 = _tm.time()
-
-                    _arcfs.ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
-                    #oo.F_alfa_rep = alpR + alpC   #  new constructed
-                    oo.F_alfa_rep[0:oo.R] = alpR
-                    oo.F_alfa_rep[oo.R:]  = alpC
-                            
-                    prt, rank, f, amp = ampAngRep(oo.F_alfa_rep, oo.dt, f_order=True)
-                    ttt8 = _tm.time()
+                    #ttt7 = _tm.time()
+                    if not oo.bFixF:   
+                        #ARcfSmpl(oo.lfc, ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
+                        ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, prior=oo.use_prior, accepts=8, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)  
+                        oo.F_alfa_rep = alpR + alpC   #  new constructed
+                        prt, rank, f, amp = ampAngRep(oo.F_alfa_rep, f_order=True)
                         #print prt
                     #ut, wt = FilteredTimeseries(ooN+1, ook, oo.smpx[:, 1:, 0:ook], oo.smpx[:, :, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR)
                     #ranks[it]    = rank
@@ -427,7 +404,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                             oo.amps[it, :]  = amp
                             oo.fs[it, :]    = f
 
-                    ttt9 = _tm.time()
                     oo.F0          = (-1*_Npp.polyfromroots(oo.F_alfa_rep)[::-1].real)[1:]
                     for tr in range(oo.TR):
                         oo.Fs[tr, 0]    = oo.F0[:]
@@ -450,18 +426,23 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                         
                         
                     oo.q2[:] = _ss.invgamma.rvs(oo.a2, scale=BB2)
-                    oo.smp_q2[it]= oo.q2
+                    oo.smp_q2[:, it]= oo.q2
 
-                ttt10 = _tm.time()
-                ttts[it, 0] = ttt2-ttt1
-                ttts[it, 1] = ttt3-ttt2
-                ttts[it, 2] = ttt4-ttt3
-                ttts[it, 3] = ttt5-ttt4
-                ttts[it, 4] = ttt6-ttt5
-                ttts[it, 5] = ttt7-ttt6
-                ttts[it, 6] = ttt8-ttt7
-                ttts[it, 7] = ttt9-ttt8
-                ttts[it, 8] = ttt10-ttt9
+                #ttt8 = _tm.time()
+
+    #             print("--------------------------------")
+    #             print ("t2-t1  %.4f" % (#ttt2-#ttt1))
+    #             print ("t3-t2  %.4f" % (#ttt3-#ttt2))
+    #             print ("t4-t3  %.4f" % (#ttt4-#ttt3))
+    # #            print ("t4b-t4a  %.4f" % (t4b-t4a))
+    # #            print ("t4c-t4b  %.4f" % (t4c-t4b))
+    # #            print ("t4-t4c  %.4f" % (t4-t4c))
+    #             print ("t5-t4  %.4f" % (#ttt5-#ttt4))
+    #             print ("t6-t5  %.4f" % (#ttt6-#ttt5))
+    #             print ("t7-t6  %.4f" % (#ttt7-#ttt6))
+    #             print ("t8-t7  %.4f" % (#ttt8-#ttt7))
+            #tttB = _tm.time()
+            #print("#tttB - #tttA  %.4f" % (#tttB - #tttA))
 
             oo.last_iter = it
             if it > oo.minITERS:
@@ -500,26 +481,43 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.VIS = ARo   #  to examine this from outside
 
 
+    def dump(self, dir=None):
+        oo    = self
+        pcklme = [oo]
+        #oo.Bsmpx = None
+        oo.smpx  = None
+        oo.wts   = None
+        oo.uts   = None
+        oo.lfc   = None
+        oo.rts   = None
+        oo.zts   = None
 
-    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70, n_interior_knots=8): ###########  RUN
-        """
-        hist_timescale_ms  rough timescale of the post-spike history, counted from 10th percentile ISI
-        """
-        global interrupted
+        if dir is None:
+            dmp = open("oo.dump", "wb")
+        else:
+            dmp = open("%s/oo.dump" % dir, "wb")
+        pickle.dump(pcklme, dmp, -1)
+        dmp.close()
+
+        # import pickle
+        # with open("mARp.dump", "rb") as f:
+        # lm = pickle.load(f)
+
+    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1): ###########  RUN
         oo     = self    #  call self oo.  takes up less room on line
-        interrupted = False
-
         oo.Cs          = len(oo.freq_lims)
         oo.C           = oo.Cn + oo.Cs
+        oo.R           = 1
         oo.k           = 2*oo.C + oo.R
-
         #  x0  --  Gaussian prior
         oo.u_x00        = _N.zeros(oo.k)
         oo.s2_x00       = _arl.dcyCovMat(oo.k, _N.ones(oo.k), 0.4)
         oo.restarts = 0
 
-        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5, multiply_shape_hyperparam=multiply_shape_hyperparam, multiply_scale_hyperparam=multiply_scale_hyperparam, hist_timescale_ms=hist_timescale_ms, n_interior_knots=n_interior_knots)
+        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5, multiply_shape_hyperparam=multiply_shape_hyperparam, multiply_scale_hyperparam=multiply_scale_hyperparam)
         oo.setParams()
+
+        print("readSmpls   ")
 
         t1    = _tm.time()
 

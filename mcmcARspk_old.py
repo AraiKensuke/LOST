@@ -110,9 +110,8 @@ class mcmcARspk(mAR.mcmcAR):
         # if (self.noAR is not None) or (self.noAR == False):
         #     self.lfc         = _lfc.logerfc()
 
-    def loadDat(self, runDir, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70, n_interior_knots=8): #################  loadDat
+    def loadDat(self, runDir, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1): #################  loadDat
         oo = self
-        hist_timescale = hist_timescale_ms*0.001
         bGetFP = False
 
         x_st_cnts = _N.loadtxt(datfilename)
@@ -161,7 +160,7 @@ class mcmcARspk(mAR.mcmcAR):
         y     = _N.array(y, dtype=_N.int)
 
         if oo.downsamp:
-            evry, dsdat = downsamplespkdat(y, 0.005, max_evry=5)
+            evry, dsdat = downsamplespkdat(y, 0.01, max_evry=5)
         else:
             evry = 1
             dsdat = y
@@ -205,7 +204,6 @@ class mcmcARspk(mAR.mcmcAR):
         oo.t1 = oo.t0 + dsdat.shape[1]
         oo.N  = oo.t1 - 1 - oo.t0
 
-        #oo.Bsmpx        = _N.zeros((iters//oo.BsmpxSkp, oo.TR, (oo.N+1) + 2))
         oo.smpx        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k))   #  start at 0 + u
         oo.ws          = _N.empty((oo.TR, oo.N+1), dtype=_N.float)
         oo.lrn   = _N.empty((oo.TR, oo.N+1))
@@ -228,21 +226,85 @@ class mcmcARspk(mAR.mcmcAR):
         maxisi = max(isis)
         minisi = min(isis)    #  >= 1
 
-        print("*****************")
-        print(maxisi)
-        print(oo.N)
-        print("*****************")
         cnts, bins = _N.histogram(isis, bins=_N.linspace(0.5, maxisi+0.5, maxisi+1))    #  cnts[0]   are number of ISIs of size 1
+        p9 = sisis[int(len(sisis)*0.9)]
 
+        x = bins[minisi:p9]
+        y = cnts[minisi-1:p9-1]
+        z = _N.polyfit(x, y, 5)
+        ply = _N.poly1d(z)
+        plyx= ply(x)
+        #imax = _N.where(plyx == _N.max(plyx))[0][0] + minisi
+        imax = _N.where(cnts == _N.max(cnts))[0][0] + minisi
 
-        smallisi   = int(sisis[int(Lisi*0.1)])
-        #  hist_timescale in ms
-        asymptote  = smallisi + int(hist_timescale / oo.dt)   #  100 ms
+        if (imax == 1):   #  no rebound excitation or pause
+            print("imax == 1")
+            oo.h0_1 = 1
+            oo.h0_2 = int(sisis[int(Lisi*0.3)]*2)#oo.h0_2*3
+            oo.h0_3 = int(sisis[int(Lisi*0.6)]*2)#oo.h0_2*3
+            oo.h0_4 = int(sisis[int(Lisi*0.9)]*2)#oo.h0_2*3
+            print("-----  %(1)d  %(2)d  %(3)d  %(4)d" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4})
+            oo.hist_max_at_0 = True
+            oo.histknots = 9
+        else:      #  a pause
+            print("pause")
+            ii = 1
+            # while cnts[ii] == 0:
+            #     ii += 1
+            # oo.h0_1 = ii  #  firing prob is 0, oo.h0_1 ms postspike
 
-        hist_interior_knots  = _N.empty(n_interior_knots)
-        lin01 = _N.linspace(0, 1, n_interior_knots, endpoint=True)
-        sqr01 = lin01**2
-        hist_interior_knots[0:8] = smallisi + sqr01 * (asymptote - smallisi)
+            #pts = _N.array([imax, int(imnisi*1.5), int(sisis[int(Lisi*0.97)]*1.5), int(sisis[int(Lisi*0.97)])*2.5])   #12
+            #pts = _N.array([imax, int(imnisi*0.7), int(sisis[int(Lisi*0.97)]*0.8), int(sisis[int(Lisi*0.97)])*1.5])    # 13
+            pts = _N.array([sisis[int(Lisi*0.05)], sisis[int(Lisi*0.15)], sisis[int(Lisi*0.5)], sisis[int(Lisi*0.7)], sisis[int(Lisi*0.9)]])    # 14
+            #pts = _N.array([imax, int(imnisi), int(sisis[int(Lisi*0.97)]), int(sisis[int(Lisi*0.97)])*2])
+            #imnisi = int(_N.mean(isis)*0.9)
+            #pts = _N.array([imax, imnisi, int(0.4*(sisis[int(Lisi*0.97)] - imnisi) + imnisi), int(sisis[int(Lisi*0.97)])])
+            #pts = _N.array([imax, imnisi, int(0.4*(sisis[int(Lisi*0.97)] - imnisi) + imnisi)*3, int(sisis[int(Lisi*0.97)])*3])
+            #pts = _N.array([imax, int(imnisi*1.2), int(imnisi*2.5), int(sisis[int(Lisi*0.97)])*3])
+
+            #print("imax    %d" % imax)
+            #pts = _N.array([int(imax*0.9), imnisi, int(0.3*(sisis[int(Lisi*0.9)] - imnisi) + imnisi), int(sisis[int(Lisi*0.9)])])
+            #pts = _N.array([imax, imnisi, int(0.25*(sisis[int(Lisi*0.85)] - imnisi) + imnisi), int(sisis[int(Lisi*0.85)])])
+            #pts = _N.array([imax, imnisi, int(0.5*(sisis[int(Lisi*0.995)] - imnisi) + imnisi), int(sisis[int(Lisi*0.995)])])
+            #pts = _N.array([imax, imnisi, int(0.4*(sisis[int(Lisi*0.995)] - imnisi) + imnisi), int(sisis[int(Lisi*0.995)])])
+
+            #pts = _N.array([19, 21, 23, 33])  #  quick hack for f64-1-Xaa/wp_0-60_5_1a
+            spts = _N.sort(pts)
+            # for i in range(3):
+            #     if spts[i] == spts[i+1]:
+            #         spts[i+1] += 1
+            oo.h0_1 = spts[0]
+            oo.h0_2 = spts[1]
+            oo.h0_3 = spts[2]
+            oo.h0_4 = spts[3]
+            oo.h0_5 = spts[4]
+            # #  max of ISI dist, mean of ISI dist   2, 3, 4, 5 (80th)
+            # oo.h0_2 = imax
+            # #oo.h0_2 = imax if (imax < 8) else 8
+            # #oo.h0_3 = int(sisis[int(Lisi*0.35)])
+            # #oo.h0_3 = 15 if (oo.h0_3 > 15) else oo.h0_3
+            # #oo.h0_4 = int(sisis[int(Lisi*0.55)])
+            # #oo.h0_4 = 22 if (oo.h0_4 > 22) else oo.h0_4
+            # oo.h0_5 = int(sisis[int(Lisi*0.85)])
+            # oo.h0_3 = int((oo.h0_5 - oo.h0_2)*0.33 + oo.h0_2)
+            # oo.h0_4 = int((oo.h0_5 - oo.h0_2)*0.66 + oo.h0_2)
+
+            #oo.h0_5 = 35 if (oo.h0_5 > 35) else oo.h0_5
+
+            print("hist knot locations-----  %(1)d  %(2)d  %(3)d  %(4)d  %(5)d" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4, "5" : oo.h0_5})
+
+            oo.h0_1 = oo.h0_1 if h0_1 is None else h0_1
+            oo.h0_2 = oo.h0_2 if h0_2 is None else h0_2
+            oo.h0_3 = oo.h0_3 if h0_3 is None else h0_3
+            oo.h0_4 = oo.h0_4 if h0_4 is None else h0_4
+            oo.h0_5 = oo.h0_5 if h0_5 is None else h0_5
+
+            print("hist knot locations -----  %(1)d  %(2)d  %(3)d  %(4)d  %(5)d   (overridden?)" % {"1" : oo.h0_1, "2" : oo.h0_2, "3" : oo.h0_3, "4" : oo.h0_4, "5" : oo.h0_5})
+
+            oo.hist_max_at_0 = False
+            oo.histknots = 10
+        oo.maxISI  = int(sisis[int(Lisi*0.99)])
+
 
         crats = _N.zeros(maxisi-1)
         for n in range(0, maxisi-2):
@@ -278,38 +340,21 @@ class mcmcARspk(mAR.mcmcAR):
 
         ###  override knot locations
 
-        upto = oo.N+1 if int(maxisi * 1.3) > oo.N+1 else int(maxisi * 1.3)
-        print("upto   %d" % upto)
-        print("oo.N   %d" % oo.N)
-        print("maxisi %d" % maxisi)
-
-        oo.Hbf = patsy.bs(_N.linspace(0, upto, upto+1, endpoint=False), knots=hist_interior_knots, include_intercept=True)    #  spline basisp
-
-        max_locs = _N.empty(oo.Hbf.shape[1])
-        for i in range(oo.Hbf.shape[1]):
-            max_locs[i] = _N.where(oo.Hbf[:, i] == _N.max(oo.Hbf[:, i]))[0]
-        print(max_locs)
-        #  find the knot that's closest to   hist_interior_knots[4] (90th %tile)
-        dist_from_90th = _N.abs(max_locs - asymptote)
-        #print(dist_from_90th)
-        oo.iHistKnotBeginFixed = _N.where(dist_from_90th == _N.min(dist_from_90th))[0][0]
-        oo.histknots = oo.Hbf.shape[1]
-
-
     def allocateSmp(self, iters, Bsmpx=False):
         oo = self
         print("^^^^^^   allocateSmp  %d" % iters)
         ####  initialize
         if Bsmpx:
-            oo.Bsmpx        = _N.zeros((iters//oo.BsmpxSkp, oo.TR, (oo.N+1) + 2))
+            oo.Bsmpx        = _N.zeros((oo.TR, iters//oo.BsmpxSkp, (oo.N+1) + 2))
             #oo.Bsmpx        = _N.zeros((iters//oo.BsmpxSkp, oo.TR, (oo.N+1) + 2))
-        oo.smp_u        = _N.zeros((iters, oo.TR))
-        oo.smp_hS        = _N.zeros((iters, oo.histknots))   # history spline
-        oo.smp_hist        = _N.zeros((iters, oo.Hbf.shape[0]))   # history spline
+        oo.smp_u        = _N.zeros((oo.TR, iters))
+        oo.smp_hS        = _N.zeros((oo.histknots, iters))   # history spline
+        oo.smp_hist        = _N.zeros((oo.N+1, iters))   # history spline
 
         if oo.bpsth:
             oo.smp_aS        = _N.zeros((iters, oo.B.shape[0]))
-        oo.smp_q2       = _N.zeros((iters, oo.TR))
+        oo.smp_q2       = _N.zeros((oo.TR, iters))
+        oo.smp_x00      = _N.empty((oo.TR, iters, oo.k))
         #  store samples of
 
         oo.allalfas     = _N.empty((iters, oo.k), dtype=_N.complex)
@@ -324,6 +369,7 @@ class mcmcARspk(mAR.mcmcAR):
         #oo.uts          = _N.empty((oo.TR, iters, oo.R, oo.N+2))
         #oo.wts          = _N.empty((oo.TR, iters, oo.C, oo.N+3))
         oo.ranks        = _N.empty((iters, oo.C), dtype=_N.int)
+        oo.pgs          = _N.empty((oo.TR, iters, oo.N+1))
         oo.fs           = _N.empty((iters, oo.C))
         oo.amps         = _N.empty((iters, oo.C))
 
@@ -376,12 +422,10 @@ class mcmcARspk(mAR.mcmcAR):
         oo.smpx        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k))   #  start at 0 + u
         oo.ws          = _N.empty((oo.TR, oo.N+1), dtype=_N.float)
 
-        #############   ADDED THIS FOR DEBUG
-        #oo.F_alfa_rep = _N.array([-0.4       +0.j,          0.96999828+0.00182841j,  0.96999828-0.00182841j, 0.51000064+0.02405102j,  0.51000064-0.02405102j,  0.64524011+0.04059507j, 0.64524011-0.04059507j]).tolist()
         if oo.F_alfa_rep is None:
             oo.F_alfa_rep  = initF(oo.R, oo.Cs, oo.Cn, ifs=oo.ifs).tolist()   #  init F_alfa_rep
 
-        #print(ampAngRep(oo.F_alfa_rep))
+        print(ampAngRep(oo.F_alfa_rep))
         if oo.q20 is None:
             oo.q20         = 0.00077
         oo.q2          = _N.ones(oo.TR)*oo.q20
@@ -389,9 +433,6 @@ class mcmcARspk(mAR.mcmcAR):
         oo.F0          = (-1*_Npp.polyfromroots(oo.F_alfa_rep)[::-1].real)[1:]
         oo.Fs    = _N.zeros((oo.TR, oo.k, oo.k))
 
-        print(oo.k)
-        print(oo.F0.shape)
-        print(oo.F.shape)
         oo.F[0] = oo.F0
         _N.fill_diagonal(oo.F[1:, 0:oo.k-1], 1)
 
@@ -456,6 +497,20 @@ class mcmcARspk(mAR.mcmcAR):
             oo.B = oo.B.T    #  My convention for beta
             oo.aS = _N.zeros(4)
 
+            #oo.Hbf = patsy.bs(_N.linspace(0, (oo.N+1), oo.N+1, endpoint=False), knots=_N.array([oo.h0_1, oo.h0_2, oo.h0_3, oo.h0_4, oo.h0_5, int(0.7*(oo.N+1))]), include_intercept=True)    #  spline basisp
+
+        #farknot = oo.maxISI*2# < (oo.t1-oo.t0) if oo.maxISI*2  else int((oo.t1-oo.t0) *0.9)
+        farknot = oo.maxISI*1.1# < (oo.t1-oo.t0) if oo.maxISI*2  else int((oo.t1-oo.t0) *0.9)
+        if oo.hist_max_at_0:
+            print("!!!!!!!!!!!!!!!!!!   here 1")
+            print(_N.array([oo.h0_1, oo.h0_2, oo.h0_3, oo.h0_4, farknot]))
+            oo.Hbf = patsy.bs(_N.linspace(0, (oo.N+1), oo.N+1, endpoint=False), knots=_N.array([oo.h0_1, oo.h0_2, oo.h0_3, oo.h0_4, farknot]), include_intercept=True)    #  spline basisp
+            print(oo.Hbf)
+        else:
+            print("!!!!!!!!!!!!!!!!!!   here 2")
+            print(_N.array([oo.h0_1, oo.h0_2, oo.h0_3, oo.h0_4, oo.h0_5, farknot]))
+            oo.Hbf = patsy.bs(_N.linspace(0, (oo.N+1), oo.N+1, endpoint=False), knots=_N.array([oo.h0_1, oo.h0_2, oo.h0_3, oo.h0_4, oo.h0_5, farknot]), include_intercept=True)    #  spline basisp
+            print(oo.Hbf)
 
 
     def stitch_Hist(self, ARo, hcrv, stsM):  # history curve
@@ -478,7 +533,6 @@ class mcmcARspk(mAR.mcmcAR):
             #ARo[m, t1+1:] = hcrv[1:T]#hcrv[0:T-1]
             ARo[m, t1+1:] = hcrv[0:T-1]#hcrv[1:T]#
             isiHiddenPrt = oo.t0_is_t_since_1st_spk[m] + 1
-
             ARo[m, 0:sts[0]+1] = hcrv[isiHiddenPrt:isiHiddenPrt + sts[0]+1]
 
     def getComponents(self):
@@ -510,6 +564,36 @@ class mcmcARspk(mAR.mcmcAR):
 
         oo.zts0 = _N.array(oo.zts[:, :, 1:, 0], dtype=_N.float16)
 
+    def readdump(self):
+        oo    = self
+
+        with open("mARp.dump", "rb") as f:
+            lm = pickle.load(f)
+        f.close()
+        oo.F_alfa_rep = lm[0].allalfas[-1].tolist()
+        oo.q20 = lm[0].q2[0]
+        oo.aS  = lm[0].aS
+        oo.us  = lm[0].us
+
+
+    #def CIF(self, us=None, alps=None, hS=None, osc=None, smplInd0=None, smplInd1=None):
+
+    """
+        pcklme["B"]    = oo.B
+        pcklme["q2"]   = oo.smp_q2[:, 0:toiter]
+        pcklme["amps"] = oo.amps[0:toiter]
+        pcklme["fs"]   = oo.fs[0:toiter]
+        pcklme["u"]    = oo.smp_u[:, 0:toiter]
+        pcklme["mnStds"]= oo.mnStds[0:toiter]
+        pcklme["allalfas"]= oo.allalfas[0:toiter]
+        pcklme["smpx"] = oo.smpx
+        pcklme["ws"]   = oo.ws
+        pcklme["t0_is_t_since_1st_spk"] = oo.t0_is_t_since_1st_spk
+        if oo.Hbf is not None:
+            pcklme["spkhist"] = oo.smp_hist[:, 0:toiter]
+            pcklme["Hbf"]    = oo.Hbf
+            pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter]
+    """
     def CIF(self, gibbsIter=0):
         """
         us     offset                     TR x 1
@@ -518,10 +602,10 @@ class mcmcARspk(mAR.mcmcAR):
         osc                               TR x Nm1
         """
         oo = self
-        usr  = oo.smp_u[gibbsIter].reshape((oo.TR, 1))
+        usr  = oo.smp_u[:, gibbsIter].reshape((oo.TR, 1))
         alps = oo.smp_aS[gibbsIter]  #  this is last
-        hS   = oo.smp_hS[gibbsIter]  #  this is last
-        osc  = oo.Bsmpx[gibbsIter//oo.BsmpxSkp, 2:]
+        hS   = oo.smp_hS[:, gibbsIter]  #  this is last
+        osc  = oo.Bsmpx[:, gibbsIter//oo.BsmpxSkp, 2:]
 
         ARo   = _N.empty((oo.TR, oo.N+1))
 
@@ -593,28 +677,25 @@ class mcmcARspk(mAR.mcmcAR):
         if pcklme is None:
             pcklme = {}
 
-        toiter         = oo.last_iter+1 if (toiter is None) else toiter
+        toiter         = oo.last_iter if (toiter is None) else toiter
         if oo.bpsth:
-            pcklme["aS"]   = oo.smp_aS[0:toiter:oo.BsmpxSkp]  #  this is last
+            pcklme["aS"]   = oo.smp_aS[0:toiter]  #  this is last
         pcklme["frm"]    = frm
         pcklme["evry"]    = oo.evry
         pcklme["B"]    = oo.B
-        pcklme["BsmpxSkp"]    = oo.BsmpxSkp
-        pcklme["toiter"]      = toiter
-        pcklme["q2"]   = oo.smp_q2[0:toiter:oo.BsmpxSkp]
-        pcklme["amps"] = oo.amps[0:toiter:oo.BsmpxSkp]
-        pcklme["fs"]   = oo.fs[0:toiter:oo.BsmpxSkp]
-        pcklme["u"]    = oo.smp_u[0:toiter:oo.BsmpxSkp]
-        pcklme["mnStds"]= oo.mnStds[0:toiter:oo.BsmpxSkp]
-        pcklme["allalfas"]= oo.allalfas[0:toiter:oo.BsmpxSkp]
+        pcklme["q2"]   = oo.smp_q2[:, 0:toiter]
+        pcklme["amps"] = oo.amps[0:toiter]
+        pcklme["fs"]   = oo.fs[0:toiter]
+        pcklme["u"]    = oo.smp_u[:, 0:toiter]
+        pcklme["mnStds"]= oo.mnStds[0:toiter]
+        pcklme["allalfas"]= oo.allalfas[0:toiter]
         pcklme["smpx"] = oo.smpx
         pcklme["ws"]   = oo.ws
-        pcklme["useTrials"]   = oo.useTrials
         pcklme["t0_is_t_since_1st_spk"] = oo.t0_is_t_since_1st_spk
         if oo.Hbf is not None:
-            pcklme["spkhist"] = oo.smp_hist[0:toiter:oo.BsmpxSkp]
+            pcklme["spkhist"] = oo.smp_hist[:, 0:toiter]
             pcklme["Hbf"]    = oo.Hbf
-            pcklme["h_coeffs"]    = oo.smp_hS[0:toiter:oo.BsmpxSkp]
+            pcklme["h_coeffs"]    = oo.smp_hS[:, 0:toiter]
         if oo.doBsmpx:
             pcklme["Bsmpx"]    = oo.Bsmpx[0:toiter//oo.BsmpxSkp]
 

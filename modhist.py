@@ -54,15 +54,15 @@ def modhistAll(spk01s, x_or_lfp, shftPhase=0, fltPrms=[3.3, 11, 1, 15], t0=None,
         sSpkPhs.append(_N.sin(2*_N.pi*ph_x[ispks]))
         phs.append(ph_x[ispks])
 
-    if nofig:
-        if not flatten:
-            return phs
-        else:
-            fl = []
-            for i in range(len(phs)):
-                fl.extend(phs[i])
-            return fl
-    return figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, surrogates=surrogates, normed=normed, fn=fn, maxY=maxY, yticks=yticks, color=color, xlabel=xlabel, smFnt=smFnt, bgFnt=bgFnt)
+    # if nofig:
+    #     if not flatten:
+    #         return phs
+    #     else:
+    #         fl = []
+    #         for i in range(len(phs)):
+    #             fl.extend(phs[i])
+    #         return fl
+    return figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, surrogates=surrogates, normed=normed, fn=fn, maxY=maxY, yticks=yticks, color=color, xlabel=xlabel, smFnt=smFnt, bgFnt=bgFnt, nofig=nofig)
 
 def histPhase0_phaseInfrdAll(mARp, _mdn, t0=None, t1=None, bRealDat=False, trials=None, fltPrms=None, maxY=None, yticks=None, fn=None, normed=False, surrogates=1, shftPhase=0, color=None):
     if not bRealDat:
@@ -166,7 +166,7 @@ def getPhases(_mdn, offset=0):
 
     return ph
 
-def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surrogates=1, normed=False, fn=None, maxY=None, yticks=None, color=None, smFnt=20, bgFnt=22, xlabel="phase"):  #  phase histogram
+def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surrogates=1, normed=False, fn=None, maxY=None, yticks=None, color=None, smFnt=20, bgFnt=22, xlabel="phase", nofig=False):  #  phase histogram
     ltr = len(trials)
     inorderTrials = _N.arange(ltr)   #  original trial IDs no lnger necessary
     R2s = _N.empty(surrogates)
@@ -188,51 +188,57 @@ def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surroga
 
         R2s[srgt]  = _N.sqrt((1./(Nspks*Nspks)) * (_N.sum(vcSpkPhs)**2 + _N.sum(vsSpkPhs)**2))
 
-
     vPhs  = _N.fromiter(itls.chain.from_iterable(phs), _N.float)
-    fig, ax = _plt.subplots(figsize=(6, 4.2))
+
+    if not nofig:
+        fig, ax = _plt.subplots(figsize=(6, 4.2))
     if color is None:
         ec = mC.hist1
     else:
         ec = color
-    _plt.hist(vPhs.tolist() + (vPhs + 1).tolist(), bins=_N.linspace(0, 2, 51), color=ec, edgecolor=ec, density=normed)
-
-    if maxY is not None:
-        _plt.ylim(0, maxY)
-    elif normed:
-        _plt.ylim(0, 1)
-    #_plt.title("R = %.3f" % _N.sqrt(R2), fontsize=smFnt)
-    _plt.xlabel(xlabel, fontsize=bgFnt)
-    _plt.ylabel("prob. density", fontsize=bgFnt)
-    _plt.xticks(fontsize=smFnt)
-    _plt.yticks(fontsize=smFnt)
-    if yticks is not None:
-        #  plotting 2 periods, probability is halved, so boost it by 2
-        _plt.yticks(yticks[0], yticks[1])
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].axis.axes.tick_params(direction="out", width=2)
-    ax.spines["bottom"].axis.axes.tick_params(direction="out", width=2)
-
-    ax.yaxis.set_ticks_position("left")
-    ax.xaxis.set_ticks_position("bottom")
-    #    for tic in ax.xaxis.get_major_ticks():
-    #   tic.tick1On = tic.tick2On = False
-
-    fig.subplots_adjust(left=0.17, bottom=0.19, right=0.95, top=0.92)
-
-    if fn is None:
-        fn = "modulationHistogram,R=%.3f.eps" % R2s[0]
+    if not nofig:
+        _plt.hist(vPhs.tolist() + (vPhs + 1).tolist(), bins=_N.linspace(0, 2, 51), color=ec, edgecolor=ec, density=normed)
     else:
-        fn = "%(1)s,R=%(2).3f.eps" % {"1" : fn, "2" : R2s[0]}
-        
-    # if setname is not None:
-    #     _plt.savefig(resFN(fn, dir=setname), transparent=True)
-    # else:
-    #     _plt.savefig(fn, transparent=True)
-    # _plt.close()
-    return R2s
+        cnts, bins = _N.histogram(vPhs.tolist() + (vPhs + 1).tolist(), bins=_N.linspace(0, 2, 51), density=normed)
+        return cnts, bins, R2s[0]
+
+    if not nofig:
+        if maxY is not None:
+            _plt.ylim(0, maxY)
+        elif normed:
+            _plt.ylim(0, 1)
+        #_plt.title("R = %.3f" % _N.sqrt(R2), fontsize=smFnt)
+        _plt.xlabel(xlabel, fontsize=bgFnt)
+        _plt.ylabel("prob. density", fontsize=bgFnt)
+        _plt.xticks(fontsize=smFnt)
+        _plt.yticks(fontsize=smFnt)
+        if yticks is not None:
+            #  plotting 2 periods, probability is halved, so boost it by 2
+            _plt.yticks(yticks[0], yticks[1])
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].axis.axes.tick_params(direction="out", width=2)
+        ax.spines["bottom"].axis.axes.tick_params(direction="out", width=2)
+
+        ax.yaxis.set_ticks_position("left")
+        ax.xaxis.set_ticks_position("bottom")
+        #    for tic in ax.xaxis.get_major_ticks():
+        #   tic.tick1On = tic.tick2On = False
+
+        fig.subplots_adjust(left=0.17, bottom=0.19, right=0.95, top=0.92)
+
+        if fn is None:
+            fn = "modulationHistogram,R=%.3f.eps" % R2s[0]
+        else:
+            fn = "%(1)s,R=%(2).3f.eps" % {"1" : fn, "2" : R2s[0]}
+
+        # if setname is not None:
+        #     _plt.savefig(resFN(fn, dir=setname), transparent=True)
+        # else:
+        #     _plt.savefig(fn, transparent=True)
+        # _plt.close()
+        return R2s
 
 def oscPer(setname, fltPrms=[5, 13, 1, 20], t0=None, t1=None, tr0=0, tr1=None, trials=None, fn=None, showHist=True, osc=None):
     """
