@@ -22,11 +22,12 @@ import utilities as _U
 import numpy.polynomial.polynomial as _Npp
 import time as _tm
 import LOST.ARlib as _arl
+
 import LOST.kfARlibMPmv_ram2 as _kfar
 import pyPG as lw
 #from ARcfSmpl import ARcfSmpl, FilteredTimeseries
-import LOST.ARcfSmplNoMCMC as _arcfs
-#from ARcfSmplNoMCMC import ARcfSmpl
+#import LOST.ARcfSmplNoMCMC as _arcfs
+from ARcfSmplNoMCMC import ARcfSmpl
 
 import commdefs as _cd
 

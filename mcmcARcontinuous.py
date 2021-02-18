@@ -5,6 +5,7 @@ from LOST.ARcfSmplFuncs import ampAngRep, buildLims, FfromLims, dcmpcff, initF
 import LOST.commdefs as _cd
 
 ram = False
+
 if ram:
     import LOST.ARcfSmplNoMCMC_ram as _arcfs
 else:
@@ -15,6 +16,7 @@ import numpy as _N
 use_prior     = _cd.__COMP_REF__
 ARord         = _cd.__NF__
 
+
 r    = 0.99
 th   = 0.05
 th1pi= _N.pi*th
@@ -22,12 +24,13 @@ th1pi= _N.pi*th
 alfa  = _N.array([r*(_N.cos(th1pi) + 1j*_N.sin(th1pi)), 
                   r*(_N.cos(th1pi) - 1j*_N.sin(th1pi))])
 
-ARcoeff          = (-1*_Npp.polyfromroots(alfa)[::-1][1:]).real
 
 #  used to generate
 gCn      = 0   # noise components
 gR       = 1
 gCs      = 1
+
+
 #  guessing AR coefficients of this form
 Cn      = 3   # noise components
 Cs      = 1
@@ -36,7 +39,7 @@ R       = 3
 k     = 2*(Cn + Cs) + R
 N     = 5000
 TR    = 1
-
+ARcoeff          = (-1*_Npp.polyfromroots(alfa)[::-1][1:]).real
 sgnl, y = createDataAR(N+k, ARcoeff, 0.1, 0.1)
 
 nzs     = _N.empty((gR + gCn, N+k))
@@ -83,17 +86,21 @@ if ram:
     smpx_contiguous2        = _N.zeros((TR, N + 2, k-1))
 
 for ex in range(EXMPL):
-    obsvd[0] = sgnl
+    _obsvd = _N.loadtxt("obsvd.txt")
+    obsvd  = _obsvd.reshape((1, N+k))
+    # obsvd[0] = sgnl
 
-    for n in range(gR):
-        AR1 = _N.array([(_N.random.rand() - 0.5)*2])*0.1
-        #AR1 = _N.array([0.98])
-        nzs[n], y = createDataAR(N+k, AR1, 0.05, 0.05)
+    # for n in range(gR):
+    #     AR1 = _N.array([(_N.random.rand() - 0.5)*2])*0.1
+    #     #AR1 = _N.array([0.98])
+    #     nzs[n], y = createDataAR(N+k, AR1, 0.05, 0.05)
 
-        sdNz = _N.std(nzs[n])
-        scl[n] = _N.random.rand() * MS
+    #     sdNz = _N.std(nzs[n])
+    #     scl[n] = _N.random.rand() * MS
 
-        obsvd[0] += scl[n] * ((sdSgnl / sdNz) * nzs[n])
+    #     obsvd[0] += scl[n] * ((sdSgnl / sdNz) * nzs[n])
+
+
 
     for n in range(N):
         smpx[0, n+2] = obsvd[0, n:n+k]

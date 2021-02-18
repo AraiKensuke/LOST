@@ -10,10 +10,19 @@ import scipy.stats as _ss
 import numpy.polynomial.polynomial as _Npp
 import time as _tm
 import LOST.ARlib as _arl
-import LOST.kfARlibMPmv_ram2 as _kfar
+
+cython_inv = False
+if cython_inv == False:
+    import LOST.kfARlibMPmv_ram2 as _kfar
+else:
+    import LOST.kfARlibMPmv_ram3 as _kfar
 import pyPG as lw
 
-import LOST.ARcfSmplNoMCMC as _arcfs
+cython_arc = True
+if cython_arc:
+    import LOST.ARcfSmplNoMCMC_ram as _arcfs
+else:
+    import LOST.ARcfSmplNoMCMC as _arcfs
 #
 #from ARcfSmpl2 import ARcfSmpl
 
@@ -139,9 +148,13 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         #runTO = ooNMC + oo.burn - 1 if (burns is None) else (burns - 1)
         runTO = oo.ITERS - 1
         oo.allocateSmp(runTO+1, Bsmpx=oo.doBsmpx)
-
-        alpR   = oo.F_alfa_rep[0:oo.R]
-        alpC   = oo.F_alfa_rep[oo.R:]
+        if cython_arc:
+            _arcfs.init(ooN+1-oo.ignr, oo.k, oo.TR, oo.R, oo.Cs, oo.Cn, aro=_cd.__NF__)
+            alpR   = _N.array(oo.F_alfa_rep[0:oo.R])
+            alpC   = _N.array(oo.F_alfa_rep[oo.R:])
+        else:
+            alpR   = oo.F_alfa_rep[0:oo.R]
+            alpC   = oo.F_alfa_rep[oo.R:]
 
         BaS = _N.zeros(oo.N+1)#_N.empty(oo.N+1)
 
@@ -206,6 +219,9 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         #  oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1]
         smpx_contiguous1        = _N.zeros((oo.TR, oo.N + 2, oo.k))
         smpx_contiguous2        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k-1))
+        if cython_inv:
+            oo.if_V = _N.array(oo.f_V)
+            oo.chol_L_fV = _N.array(oo.f_V)
         ######  Gibbs sampling procedure
         ttts = _N.zeros((oo.ITERS, 9))
         for itrB in range(iterBLOCKS):
@@ -393,8 +409,11 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                     oo.gau_obs = kpOws - BaS - ARo - oous_rs - oo.knownSig
                     oo.gau_var =1 / oo.ws   #  time dependent noise
-                    
-                    _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, smpx_tmp, K)
+
+                    if cython_inv:
+                        _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.chol_L_fV, oo.if_V, oo.p_x, oo.p_V, smpx_tmp, K)
+                    else:
+                        _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, smpx_tmp, K)
 
                     oo.smpx[:, 2:]           = smpx_tmp
                     oo.smpx[:, 1, 0:ook-1]   = oo.smpx[:, 2, 1:]
@@ -408,7 +427,15 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                     ttt7 = _tm.time()
 
-                    _arcfs.ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
+
+                    if cython_arc:
+                        _N.copyto(smpx_contiguous1, 
+                                  oo.smpx[:, 1+oo.ignr:])
+                        _N.copyto(smpx_contiguous2, 
+                                  oo.smpx[:, oo.ignr:, 0:ook-1])
+                        _arcfs.ARcfSmpl(ooN+1-oo.ignr, ook, oo.TR, oo.AR2lims, smpx_contiguous1, smpx_contiguous2, oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.sig_ph0L, oo.sig_ph0H)
+                    else:
+                        _arcfs.ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
                     #oo.F_alfa_rep = alpR + alpC   #  new constructed
                     oo.F_alfa_rep[0:oo.R] = alpR
                     oo.F_alfa_rep[oo.R:]  = alpC
@@ -451,6 +478,9 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                         
                     oo.q2[:] = _ss.invgamma.rvs(oo.a2, scale=BB2)
                     oo.smp_q2[it]= oo.q2
+                    ttt10 = _tm.time()
+                else:
+                    ttt7 = ttt8 = ttt9 = ttt10 = ttt6
 
                 ttt10 = _tm.time()
                 ttts[it, 0] = ttt2-ttt1
@@ -467,6 +497,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
             if it > oo.minITERS:
                 smps = _N.empty((3, it+1))
                 smps[0, :it+1] = oo.amps[:it+1, 0]
+
                 smps[1, :it+1] = oo.fs[:it+1, 0]
                 smps[2, :it+1] = oo.mnStds[:it+1]
 
