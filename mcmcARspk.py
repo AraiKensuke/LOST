@@ -161,7 +161,7 @@ class mcmcARspk(mAR.mcmcAR):
         y     = _N.array(y, dtype=_N.int)
 
         if oo.downsamp:
-            evry, dsdat = downsamplespkdat(y, 0.005, max_evry=5)
+            evry, dsdat = downsamplespkdat(y, 0.005, max_evry=3)
         else:
             evry = 1
             dsdat = y

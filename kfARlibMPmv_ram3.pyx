@@ -8,6 +8,7 @@ cimport numpy as _N
 import time as _tm
 cimport cython
 from libc.math cimport sqrt
+from libc.stdio cimport printf
 import LOST.inv_cov as _invc
 
 """
@@ -50,9 +51,10 @@ def init(long N, long k, long TR):
 #def armdl_FFBS_1itrMP(y, Rv, F, q2, N, k, fx00, fV00):   #  approximation
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, :, ::1] F, double[:, :, ::1] iF, double[::1] q2, long[::1] Ns, long[::1] ks, double[:, :, ::1] fx, double[:, :, :, ::1] fV, double[:, :, :, ::1] fV_chol_L, double[:, :, :, ::1] ifV, double[:, :, ::1] px, double[:, :, :, ::1] pV, smpx, double[:, :, ::1] K):   #  approximation
+def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, :, ::1] F, double[:, :, ::1] iF, double[::1] q2, long[::1] Ns, long[::1] ks, double[:, :, ::1] fx, double[:, :, :, ::1] fV, fV_chol_L, double[:, :, :, ::1] ifV, double[:, :, ::1] px, double[:, :, :, ::1] pV, smpx, double[:, :, ::1] K):   #  approximation
     global __N, _Np1, _k, _kk, _TR, p_kinfo, kinfo
     #ttt1 = _tm.time()
+    cdef double [:, :, :, ::1] mv_fV_chol_L = fV_chol_L
     cdef double* p_gau_obs  = &gau_obs[0, 0]
     cdef double* p_gau_var  = &gau_var[0, 0]
     cdef double* p_F        = &F[0, 0, 0]
@@ -96,11 +98,35 @@ def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, 
         for tr in range(_TR):
             FFdv_new(&p_gau_obs[tr*_Np1], &p_gau_var[tr*_Np1], &p_F[tr*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_px[tr*_Np1*_k], &p_pV[tr*_Np1*_k*_k], &p_K[tr*_Np1*_k])
             # ##########  BS
+    #print("1   ifV %(v1).3e" % {"v1" : fV[3, 200, 4, 5]})
+    #ifV_o    = _N.linalg.inv(fV)    #  This is the bottle neck.  OMPing other loop
+    #print("2   ifV %(v1).3e" % {"v1" : fV[3, 200, 4, 5]})
 
-    _invc.invCovMats(_TR, _Np1, _k, fV, fV_chol_L, ifV, kinfo)
+    _invc.invCovMats(_TR, _Np1, _k, fV, mv_fV_chol_L, ifV, kinfo)
+    # ifV_o    = _N.linalg.inv(fV)    #  This is the bottle neck.  OMPing other lo
+    # cdef double[:, :, :, ::1] ifV_mv_o = ifV_o
+    # cdef double* p_ifV_o            = &ifV_mv_o[0, 0, 0, 0]
+
+    # print("3   ifV %(v1).3e" % {"v1" : fV[3, 200, 4, 5]})
+
+    # print("fV %(v1).3e   %(v2).3e" % {"v1" : ifV[3, 200, 4, 5], "v2" : ifV_o[3, 200, 4, 5]})
+    # print("fV %(v1).3e   %(v2).3e" % {"v1" : ifV[10, 10, 3, 1], "v2" : ifV_o[10, 10, 3, 1]})
         #  smpx   is TR x (N+1)+2 x k.   we sample smpx[:, 2:] and fill the 0,1st with what whas in 3rd time bin.
 
+    #C       = _N.linalg.cholesky(fV[:, __N])
+    # print("-----------------------------------")
+    # print(C)
+    # print(fV_chol_L[:, __N])
+    #ttt5 = _tm.time()
+    #  smpx   is TR x (N+1)+2 x k.   we sample smpx[:, 2:] and fill the 0,1st with what whas in 3rd time bin.
+    #smXN1       = _N.einsum("njk,nk->nj", C, ucmvnrms) + fx[:, _Np1]
     smXN       = _N.einsum("njk,nk->nj", fV_chol_L[:, __N], ucmvnrms) + fx[:, _Np1]
+    #diffff  = _N.sum(_N.abs(smXN1 - smXN2))
+    #mn      = _N.sum(_N.abs(0.5*(smXN1 + smXN2)))
+    #print(diffff)
+    smpx[:, __N] = smXN   #  not as a memview
+
+    #smXN       = _N.einsum("njk,nk->nj", fV_chol_L[:, __N], ucmvnrms) + fx[:, _Np1]
         #  smXN size TR x k
         #  einsum 
     with nogil:

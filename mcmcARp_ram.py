@@ -11,14 +11,14 @@ import numpy.polynomial.polynomial as _Npp
 import time as _tm
 import LOST.ARlib as _arl
 
-cython_inv = False
+cython_inv = True
 if cython_inv == False:
     import LOST.kfARlibMPmv_ram2 as _kfar
 else:
     import LOST.kfARlibMPmv_ram3 as _kfar
 import pyPG as lw
 
-cython_arc = True
+cython_arc = False
 if cython_arc:
     import LOST.ARcfSmplNoMCMC_ram as _arcfs
 else:
@@ -558,4 +558,3 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         t2    = _tm.time()
         print(t2-t1)
         print("done")
-
