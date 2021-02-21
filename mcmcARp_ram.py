@@ -18,7 +18,7 @@ else:
     import LOST.kfARlibMPmv_ram3 as _kfar
 import pyPG as lw
 
-cython_arc = False
+cython_arc = True
 if cython_arc:
     import LOST.ARcfSmplNoMCMC_ram as _arcfs
 else:
@@ -164,6 +164,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         RHS = _N.empty((oo.histknots, 1))
 
         print("-----------    histknots %d" % oo.histknots)
+
         cInds = _N.arange(oo.iHistKnotBeginFixed, oo.histknots)
         vInds = _N.arange(0, oo.iHistKnotBeginFixed)
         #cInds = _N.array([4, 12, 13])
@@ -214,7 +215,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         K     = _N.empty((oo.TR, oo.N + 1, oo.k))   #  kalman gain
 
         iterBLOCKS  = oo.ITERS//oo.peek
-        smpx_tmp = _N.empty((oo.TR, oo.N+1, oo.k))
+        smpx_C_cont = _N.empty((oo.TR, oo.N+1, oo.k))   #  need C contiguous
 
         #  oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1]
         smpx_contiguous1        = _N.zeros((oo.TR, oo.N + 2, oo.k))
@@ -232,7 +233,6 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 mnttt = _N.mean(ttts[0:it-1], axis=0)
                 for ti in range(9):
                     print("t%(2)d-t%(1)d  %(ttt).4f" % {"1" : ti+1, "2" : ti+2, "ttt" : mnttt[ti]})
-                    
 
             if interrupted:
                 break
@@ -411,11 +411,11 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.gau_var =1 / oo.ws   #  time dependent noise
 
                     if cython_inv:
-                        _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.chol_L_fV, oo.if_V, oo.p_x, oo.p_V, smpx_tmp, K)
+                        _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.chol_L_fV, oo.if_V, oo.p_x, oo.p_V, smpx_C_cont, K)
                     else:
-                        _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, smpx_tmp, K)
+                        _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, smpx_C_cont, K)
 
-                    oo.smpx[:, 2:]           = smpx_tmp
+                    oo.smpx[:, 2:]           = smpx_C_cont
                     oo.smpx[:, 1, 0:ook-1]   = oo.smpx[:, 2, 1:]
                     oo.smpx[:, 0, 0:ook-2]   = oo.smpx[:, 2, 2:]
 
@@ -428,6 +428,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     ttt7 = _tm.time()
 
 
+                    # print(oo.smpx[0, 0:20, 0])
+                    # print(oo.q2)
                     if cython_arc:
                         _N.copyto(smpx_contiguous1, 
                                   oo.smpx[:, 1+oo.ignr:])
@@ -439,6 +441,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     #oo.F_alfa_rep = alpR + alpC   #  new constructed
                     oo.F_alfa_rep[0:oo.R] = alpR
                     oo.F_alfa_rep[oo.R:]  = alpC
+                    # print(alpR)
+                    # print(alpC)
                             
                     prt, rank, f, amp = ampAngRep(oo.F_alfa_rep, oo.dt, f_order=True)
                     ttt8 = _tm.time()

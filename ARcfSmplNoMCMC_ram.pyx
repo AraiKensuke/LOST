@@ -121,7 +121,8 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
+#def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
+def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, double sig_ph0L, double sig_ph0H):
     global ujs, wjs, Ff, F0, Xs, Ys, XsYs, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
     global p_vfiltrootsC, p_vfiltrootsR
 
@@ -165,6 +166,7 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     #print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 
     cdef double* p_q2 = &q2[0]
+    cdef double[:, ::1] AR2lims = AR2lims_nmpy
     cdef double* p_AR2lims = &AR2lims[0, 0]
 
     cdef complex* p_valpC = &valpC[0]
@@ -184,6 +186,10 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
     #ttt2 = _tm.time()
     #ttt2a = 0
     #ttt2b = 0
+
+    # print("AR2lims    Cs %d" % Cs)
+    # print(AR2lims_nmpy)
+    # print("sig_ph0L  %(sL).4e   sig_ph0H  %(sH).4e" % {"sL" : sig_ph0L, "sH" : sig_ph0H})
 
     #for 0 <= c < C:
     for C-1 >= c > -1:
@@ -251,12 +257,7 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
                 p_Ys[ni]    = p_wjs[(N+2)*C*m + (N+2)*c + 2+ni]
                 p_Xs[2*ni]    = p_wjs[(N+2)*C*m + (N+2)*c + ni+1]
                 p_Xs[2*ni+1]    = p_wjs[(N+2)*C*m + (N+2)*c + ni]
-            # print("compare 2222")
-            # print(Ys[0:10])
-            # print(Xs[0:10, 0])
-            # print(Xs[0:10, 1])
 
-            #iH[m]       = _N.dot(Xs.T, Xs) / q2[m]
             iH00 = 0
             iH01 = 0
             iH11 = 0
@@ -320,11 +321,6 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         p_U[1] = p_J[2]*p_ES[0] + p_J[3]*p_ES[1]
         #U   = _N.dot(J, ES)
 
-        #bBdd, iBdd, mags, vals = _arl.ARevals(U[:, 0])
-        #print "U"
-        #print U[:, 0]
-        #print ":::::: *****"
-        #print ampAngRep(vals)
 
         ##########  Sample *PROPOSED* parameters 
 
@@ -345,11 +341,13 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         #tttB = _tm.time()
         #print "ph0L  %(L).4f  ph1L  %(H).4f   %(u).4f   %(s).4f" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s" : svPr2}
         #print "vPr1  %(1).4e  vPr2 %(2).4e" % {"1" : vPr1, "2" : vPr2}
-        # print("+++++++++++++++++++++++++++++")
+        # print("1  +++++++++++++++++++++++++++++")
         # print(ph0L)
         # print(ph0H)
         # print(mu1prp)
         # print(svPr2)
+        # print(J)
+
         ph0j2 = _kd.truncnormC(a=ph0L, b=ph0H, u=mu1prp, std=svPr2)
         r1    = sqrt(-1*ph0j2)
         mj0   = mu0prp + (p_J[1] * (ph0j2 - mu1prp)) / p_J[3]
@@ -373,36 +371,22 @@ def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[
         #  the positive root comes first
         p_valpC[j-1] = (ph0j1 - img)*0.5
         p_valpC[j]   = (ph0j1 + img)*0.5
-        #alpC.insert(j-1, (A[0] - img)*0.5)     #alpC.insert(j - 1, jth_r1)
-        #alpC.insert(j-1, (A[0] + img)*0.5)     #alpC.insert(j - 1, jth_r2)
-        #tttC = _tm.time()
-        #ttt2a += #tttB - #tttA
-        #ttt2b += #tttC - #tttB
-
-    # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    # print(alpC)
-    # print(valpC)
     FfR  = _N.zeros((1, k))
     ######     REAL ROOTS.  Directly sample the conditional posterior
     #for j in range(R - 1, -1, -1):
     for R-1 >= j > -1:    # range(R - 1, -1, -1):
         # given all other roots except the jth
-        #jth_r = alpR.pop(j)
 
-        #for ii in range(C):
         for 0 <= ii < C:
             p_vfiltrootsR[2*ii] = p_valpC[2*ii]
             p_vfiltrootsR[2*ii+1] = p_valpC[2*ii+1]
         iif = -1
-        #for ii in range(R):
+
         for 0 <= ii < R:
             if ii != j:
                 iif += 1
                 p_vfiltrootsR[iif+2*C] = p_valpR[ii]
 
-        #print("R !!!!")
-        #print(alpR + alpC)
-        #print(filtrootsR)
         Frmj = _Npp.polyfromroots(filtrootsR).real #  Ff first element k-delay
         FfR[0, :] = Frmj[::-1]   #  Prod{i neq j} (1 - alfa_i B)
 

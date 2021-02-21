@@ -10,6 +10,7 @@ cimport cython
 from libc.math cimport sqrt
 from libc.stdio cimport printf
 import LOST.inv_cov as _invc
+#cimport LOST.inv_cov as _invc
 
 """
 p        AR order
@@ -55,6 +56,7 @@ def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, 
     global __N, _Np1, _k, _kk, _TR, p_kinfo, kinfo
     #ttt1 = _tm.time()
     cdef double [:, :, :, ::1] mv_fV_chol_L = fV_chol_L
+    cdef double *p_fV_chol_L  = &mv_fV_chol_L[0, 0, 0, 0]
     cdef double* p_gau_obs  = &gau_obs[0, 0]
     cdef double* p_gau_var  = &gau_var[0, 0]
     cdef double* p_F        = &F[0, 0, 0]
@@ -69,7 +71,7 @@ def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, 
     cdef double* p_pV        = &pV[0, 0, 0, 0]
     cdef double* p_K        = &K[0, 0, 0]
     cdef double[:, :, ::1] smpx_mv = smpx
-    cdef double* p_smpx            = &smpx_mv[0, 0, 0]
+    cdef double* p_smpx            = &smpx_mv[0, 0, 0]  # TR, Np1, k
 
     sx_nz_vars  = _N.empty((_TR, _Np1))
     sx_norms = _N.random.randn(_TR, _Np1)
@@ -82,8 +84,10 @@ def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, 
     #  fx   TR x N x k
     #  fV   TR x N x k x k
 
-    cdef long tr, i
+    cdef long tr, i, k2, ik, jk
+    k2 = _k*_k
 
+    cdef double dotval
     ucmvnrms = _N.random.randn(_TR, _k)
     cdef double[:, ::1] v_ucmvnrms = ucmvnrms
     cdef double* p_ucmvnrms = &v_ucmvnrms[0, 0]
@@ -98,47 +102,45 @@ def armdl_FFBS_1itrMP(double[:, ::1] gau_obs, double[:, ::1] gau_var, double[:, 
         for tr in range(_TR):
             FFdv_new(&p_gau_obs[tr*_Np1], &p_gau_var[tr*_Np1], &p_F[tr*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_px[tr*_Np1*_k], &p_pV[tr*_Np1*_k*_k], &p_K[tr*_Np1*_k])
             # ##########  BS
-    #print("1   ifV %(v1).3e" % {"v1" : fV[3, 200, 4, 5]})
-    #ifV_o    = _N.linalg.inv(fV)    #  This is the bottle neck.  OMPing other loop
-    #print("2   ifV %(v1).3e" % {"v1" : fV[3, 200, 4, 5]})
 
-    _invc.invCovMats(_TR, _Np1, _k, fV, mv_fV_chol_L, ifV, kinfo)
-    # ifV_o    = _N.linalg.inv(fV)    #  This is the bottle neck.  OMPing other lo
-    # cdef double[:, :, :, ::1] ifV_mv_o = ifV_o
-    # cdef double* p_ifV_o            = &ifV_mv_o[0, 0, 0, 0]
+    #_invc.invCovMats_cdef(_TR, _Np1, _k, p_fV, p_fV_chol_L, p_ifV, p_kinfo)
+    _invc.invCovMats(_TR, _Np1, _k, fV, fV_chol_L, ifV, kinfo)
+    # #  TR x k x k   mult   TR x k   we want TR x k
+    # #  basically for each trial, 
 
-    # print("3   ifV %(v1).3e" % {"v1" : fV[3, 200, 4, 5]})
 
-    # print("fV %(v1).3e   %(v2).3e" % {"v1" : ifV[3, 200, 4, 5], "v2" : ifV_o[3, 200, 4, 5]})
-    # print("fV %(v1).3e   %(v2).3e" % {"v1" : ifV[10, 10, 3, 1], "v2" : ifV_o[10, 10, 3, 1]})
-        #  smpx   is TR x (N+1)+2 x k.   we sample smpx[:, 2:] and fill the 0,1st with what whas in 3rd time bin.
+    # smXN       = _N.einsum("njk,nk->nj", fV_chol_L[:, __N], ucmvnrms) + fx[:, _Np1]
+    # smpx[:, __N] = smXN   #  not as a memview
 
-    #C       = _N.linalg.cholesky(fV[:, __N])
-    # print("-----------------------------------")
-    # print(C)
-    # print(fV_chol_L[:, __N])
-    #ttt5 = _tm.time()
-    #  smpx   is TR x (N+1)+2 x k.   we sample smpx[:, 2:] and fill the 0,1st with what whas in 3rd time bin.
-    #smXN1       = _N.einsum("njk,nk->nj", C, ucmvnrms) + fx[:, _Np1]
-    smXN       = _N.einsum("njk,nk->nj", fV_chol_L[:, __N], ucmvnrms) + fx[:, _Np1]
-    #diffff  = _N.sum(_N.abs(smXN1 - smXN2))
-    #mn      = _N.sum(_N.abs(0.5*(smXN1 + smXN2)))
-    #print(diffff)
-    smpx[:, __N] = smXN   #  not as a memview
+    # print("0000000000000000000000000000")
+    # print(smpx[:, __N])
+    # ssss = _N.empty((_TR, _k))
+    for tr in range(_TR):
+        #  doing this for the last
+        for ik in range(_k):   #  nth trial, jth time bin
+            dotval = 0
+            for jk in range(_k):
+                dotval += p_fV_chol_L[_Np1*k2*tr+__N*k2+ik*_k+jk] * p_ucmvnrms[tr*_k+jk] 
+            dotval += p_fx[tr*_k*_Np1 + _Np1*_k + ik]
+            p_smpx[tr*_Np1*_k + __N*_k + ik] = dotval
+            #ssss[tr, ik] = dotval
+    #     #smpx[:, _Np1+1] = smXN   #  not as a memview
+    #     #p_smpx[n, :, __N] = smXN   #  not as a memview
+    # #     #ttt6 = _tm.time()
+    #print(smpx[:, __N])
 
-    #smXN       = _N.einsum("njk,nk->nj", fV_chol_L[:, __N], ucmvnrms) + fx[:, _Np1]
-        #  smXN size TR x k
-        #  einsum 
     with nogil:
         # for tr in range(_TR):
-        #     dotval = 0
         #     #  doing this for the last
         #     for ik in range(_k):   #  nth trial, jth time bin
-        #         dotval += fV_chol_L[tr, _Np1, k] * ucmvnrms[tr, ik] + fx[tr, _Np1, ik]
-        #     p_smpx[n, _Np1]
-        #     #smpx[:, _Np1+1] = smXN   #  not as a memview
-        #     p_smpx[n, :, __N] = smXN   #  not as a memview
-        #     #ttt6 = _tm.time()
+        #         dotval = 0
+        #         for jk in range(_k):
+        #             dotval += p_fV_chol_L[_Np1*k2*tr+__N*k2+ik*_k+jk] * p_ucmvnrms[tr*_k+jk] 
+        #         dotval += p_fx[tr*_k*_Np1 + _Np1*_k + ik]
+        #         p_smpx[tr*_Np1*_k + __N*_k + ik] = dotval
+        # #     #smpx[:, _Np1+1] = smXN   #  not as a memview
+        # #     #p_smpx[n, :, __N] = smXN   #  not as a memview
+        # # #     #ttt6 = _tm.time()
 
         for tr in range(_TR):
             BSvec(&p_iF[tr*_k*_k], &p_ifV[tr*_Np1*_k*_k], p_q2[tr], &p_fx[tr*_Np1*_k], &p_fV[tr*_Np1*_k*_k], &p_smpx[tr*_Np1*_k], &p_sx_nz_vars[tr*_Np1], &p_sx_norms[tr*_Np1])
