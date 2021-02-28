@@ -48,8 +48,8 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
     print("INIT ARcfSmplNoMCMC_ram")
     cdef int C = Cs + Cn
 
-    ujs     = _N.empty((TR, R, N + 1, 1))
-    wjs     = _N.empty((TR, C, N + 2, 1))
+    ujs     = _N.zeros((TR, R, N + 1, 1))
+    wjs     = _N.zeros((TR, C, N + 2, 1))
     cdef double[:, :, :, ::1] v_ujs = ujs
     p_ujs = &v_ujs[0, 0, 0, 0]
     cdef double[:, :, :, ::1] v_wjs = wjs
@@ -62,12 +62,12 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
     cdef double[::1] vF0  = F0
     p_F0  = &vF0[0]
 
-    Xs     = _N.empty((N-2, 2))
-    Ys     = _N.empty((N-2, 1))
-    XsYs   = _N.empty((2, 1))
-    H      = _N.empty((TR, 2, 2))
-    iH     = _N.empty((TR, 2, 2))
-    mu     = _N.empty((TR, 2, 1))
+    Xs     = _N.zeros((N-2, 2))
+    Ys     = _N.zeros((N-2, 1))
+    XsYs   = _N.zeros((2, 1))
+    H      = _N.zeros((TR, 2, 2))
+    iH     = _N.zeros((TR, 2, 2))
+    mu     = _N.zeros((TR, 2, 1))
 
     cdef double[:, ::1] vXs = Xs
     p_Xs = &vXs[0, 0]
@@ -83,10 +83,10 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
     cdef double[:, :, ::1] vmu = mu
     p_mu = &vmu[0, 0, 0]
 
-    J      = _N.empty((2, 2))
-    Ji      = _N.empty((2, 2))
-    Mji    = _N.empty(TR)
-    mj     = _N.empty(TR)
+    J      = _N.zeros((2, 2))
+    Ji      = _N.zeros((2, 2))
+    Mji    = _N.zeros(TR)
+    mj     = _N.zeros(TR)
 
     cdef double[:, ::1] vJ = J
     p_J = &vJ[0, 0]
@@ -97,8 +97,8 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
     cdef double[::1] vmj = mj
     p_mj = &vmj[0]
 
-    filtrootsC = _N.empty(2*C-2+R, dtype=_N.complex)
-    filtrootsR = _N.empty(2*C+R-1, dtype=_N.complex)
+    filtrootsC = _N.zeros(2*C-2+R, dtype=_N.complex)
+    filtrootsR = _N.zeros(2*C+R-1, dtype=_N.complex)
     cdef complex[::1] vfiltrootsC = filtrootsC
     p_vfiltrootsC = &vfiltrootsC[0]
     cdef complex[::1] vfiltrootsR = filtrootsR
@@ -191,6 +191,7 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
     # print(AR2lims_nmpy)
     # print("sig_ph0L  %(sL).4e   sig_ph0H  %(sH).4e" % {"sL" : sig_ph0L, "sH" : sig_ph0H})
 
+    #print("ARcfSmpNoMCMC_ram  Starting q2:  %.4e" % p_q2[0])
     #for 0 <= c < C:
     for C-1 >= c > -1:
         if c >= Cs:
@@ -222,7 +223,8 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
 
         #     #Frmj = _Npp.polyfromroots(alpR + alpC).real
         Frmj = _Npp.polyfromroots(filtrootsC).real
-        
+        #print("Frmj   ")
+        #print(Frmj)
 
         Ff[0, :]   = Frmj[::-1]
         #for 0 <= ti < k - 1:m
@@ -252,8 +254,9 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
             # Xs[:, 0] = wjs[m, c, 1:N-1, 0]   # This block
             # Xs[:, 1] = wjs[m, c, 0:N-2, 0]
 
+            #Xs     = _N.zeros((N-2, 2))
             for 0 <= ni < N-2:
-                # wjs 
+                # wjs      = _N.zeros((TR, C, N + 2, 1))
                 p_Ys[ni]    = p_wjs[(N+2)*C*m + (N+2)*c + 2+ni]
                 p_Xs[2*ni]    = p_wjs[(N+2)*C*m + (N+2)*c + ni+1]
                 p_Xs[2*ni+1]    = p_wjs[(N+2)*C*m + (N+2)*c + ni]
@@ -282,14 +285,14 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
             p_H[4*m+1]=-p_iH[4*m+1] * idiv;
             p_H[4*m+2]=-p_iH[4*m+1] * idiv;
 
-            #Xs     = _N.empty((N-2, 2))
-            #Ys     = _N.empty((N-2, 1))
+            #Xs     = _N.zeros((N-2, 2))
+            #Ys     = _N.zeros((N-2, 1))
             p_XsYs[0] = 0
             p_XsYs[1] = 0
             for 0 <= ti < N-2:
                 p_XsYs[0] += p_Xs[2*ti]*p_Ys[ti]
                 p_XsYs[1] += p_Xs[2*ti+1]*p_Ys[ti]
-            #mu     = _N.empty((TR, 2, 1))
+            #mu     = _N.zeros((TR, 2, 1))
             p_mu[2*m]     = (p_H[4*m]  *p_XsYs[0] + p_H[4*m+2]*p_XsYs[1])*iq2
             p_mu[2*m+1]   = (p_H[4*m+1]*p_XsYs[0] + p_H[4*m+3]*p_XsYs[1])*iq2
             #mu[m]        = _N.dot(H[m], _N.dot(Xs.T, Ys)) * iq2
@@ -298,7 +301,7 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
             
         #  
 
-        #iH     = _N.empty((TR, 2, 2))
+        #iH     = _N.zeros((TR, 2, 2))
         #_N.copyto(Ji, _N.sum(iH, axis=0))
         idiv = 1./(p_Ji[0]*p_Ji[3]-p_Ji[1]*p_Ji[2])
         p_J[0] = p_Ji[3] * idiv
@@ -339,14 +342,14 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
         mu0prp = p_U[0]
 
         #tttB = _tm.time()
-        #print "ph0L  %(L).4f  ph1L  %(H).4f   %(u).4f   %(s).4f" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s" : svPr2}
-        #print "vPr1  %(1).4e  vPr2 %(2).4e" % {"1" : vPr1, "2" : vPr2}
-        # print("1  +++++++++++++++++++++++++++++")
-        # print(ph0L)
-        # print(ph0H)
-        # print(mu1prp)
-        # print(svPr2)
+        # print("%d  +++++++++++++++++++++++++++++" % c)
+        # print "ph0L  %(L).4f  ph0H  %(H).4f   %(u).4f   %(s1).4f   %(s2).4f   idiv  %(id).4e" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s1" : svPr1, "s2" : svPr2, "id" : idiv}
+        # #print "vPr1  %(1).4e  vPr2 %(2).4e" % {"1" : vPr1, "2" : vPr2}
         # print(J)
+        # print(Ji)
+        # print(Xs[::50, 0])
+        # print(Xs[::50, 1])
+        # print(Ys[::50])
 
         ph0j2 = _kd.truncnormC(a=ph0L, b=ph0H, u=mu1prp, std=svPr2)
         r1    = sqrt(-1*ph0j2)
@@ -374,6 +377,7 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
     FfR  = _N.zeros((1, k))
     ######     REAL ROOTS.  Directly sample the conditional posterior
     #for j in range(R - 1, -1, -1):
+    #print("rj - roots")
     for R-1 >= j > -1:    # range(R - 1, -1, -1):
         # given all other roots except the jth
 
@@ -421,14 +425,48 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
             tot += p_Mji[m]*p_mj[m]
         #  truncated Gaussian to [-1, 1]
 
+        # print("R  %d    .................."  % j)
+        # print(Frmj)
+        # print("UR   %(ur).4e   JR  %(jr).4e" % {"ur" : UR, "jr" : JR})
         JR  = 1 / JiR
         UR  = JR * tot
 
-        #  we only want 
+        #  We sometimes get this.  Repeat execution of mcmcARcontinuous2.py
+        #  starting with same seed.  
+        #   File "ARcfSmplNoMCMC_ram.pyx", line 435, in ARcfSmplNoMCMC_ram.ARcfSmpl
+        #   File "kdist.pyx", line 206, in kdist.truncnormC
+        #     a = (a - u) / std
+        # ZeroDivisionError: float division
+
+
+        # 0  +++++++++++++++++++++++++++++
+        # ph0L  -1.0000  ph0H  0.0000   -0.0519   0.0010   0.0012   idiv  1.4814e-12
+        # [[ 1.35449271e-06 -5.98894384e-07]
+        #  [-5.98894384e-07  1.35847269e-06]]
+        # [[917040.01093497 404284.98595776]
+        #  [404284.98595776 914353.315131  ]]
+        # [ 1.03847005  3.89664149  2.20783531  1.11250282  7.42264765  3.7202803
+        #  -7.2515943  -2.69113341  1.16868503  0.92892936  2.15100709]
+        # [-2.64953923  1.61031552  1.30450315  1.19671467  0.90730243  8.0812135
+        #  -1.2202872   1.457269    0.51048828  0.45051488 -2.53918853]
+        # [[-0.53240586]
+        #  [-3.2872491 ]
+        #  [-0.63618095]
+        #  [ 2.14652302]
+        #  [ 2.67011545]
+        #  [-2.3844769 ]
+        #  [-3.70115082]
+        #  [ 1.20983983]
+        #  [-2.92045352]
+        #  [ 2.35508279]
+        #  [-4.20680826]]
+        # Traceback (most recent call last):
+        ##   Above traceback identical between run when there is an error and when there isn't.  Xs[::50, 0] and Xs[::50, 1] and Ys[::50]
         rj = _kd.truncnormC(-1., 1., UR, sqrt(JR))
 
         #alpR.insert(j, rj)
         p_valpR[j] = rj
+        #print(rj)
     #alpR[:] = valpR
     #alpC[:] = valpC
     #ttt3 = _tm.time()
@@ -440,5 +478,5 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
     # print("#ttt2b  %.4f" % #ttt2b)
 
 
-    #return ujs, wjs#, lsmpld
+    return ujs, wjs#, lsmpld
 

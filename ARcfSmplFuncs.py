@@ -6,7 +6,8 @@ def ampAngRep(z, dt, sp="\n", f_order=False):
     #  if f_order=True, give me rank of each element (in ascending order)
     #  if f=3, 9, 1, 200 Hz  
     #  return me (2, 0, 1, 3)  _ss.rankdata
-    prt = ""
+    prtR = ""
+    prtC = []
     fs  = []
     amps= []
     
@@ -27,27 +28,39 @@ def ampAngRep(z, dt, sp="\n", f_order=False):
                     cStr = "R"
 
             if ((cStr == "C") and (ang < _N.pi)) and (ang != 0):
-                prt += "C  [%(r) .2f,  %(fa).3f]%(sp)s" % {"r" : r, "fa" : (0.5*(ang / _N.pi)) / dt, "t" : cStr, "sp" : sp}
+                prtC.append("C  [%(r) .2f,  %(fa).3f]%(sp)s" % {"r" : r, "fa" : (0.5*(ang / _N.pi)) / dt, "t" : cStr, "sp" : sp})
                 fs.append(ang / _N.pi)
                 amps.append(r)
             elif cStr == "R":
-                prt += "R  [%(r) .2f, ..]%(sp)s" % {"r" : zv.real, "t" : cStr, "sp" : sp}
-    else:
+                prtR += "R  [%(r) .2f, ..]%(sp)s" % {"r" : zv.real, "t" : cStr, "sp" : sp}
+
+    """
+    else:   #  not a list or an array
         cStr  = "R"
         r  = _N.abs(z)
         ang= _N.angle(z)
         if ang < 0:
             ang = 2*_N.pi + ang
         if (type(zv) == _N.complex) or (type(zv) == _N.complex64) or (type(zv) == _N.complex128):
-            cStr = "R"
 
-        prt += "%(t)s  [%(r) .2f  %(fa).3f]%(sp)s" % {"r" : r, "fa" : (ang / _N.pi), "t" : cStr, "sp" : sp}
+            cStr = "C"   #  shouldn't this be a complex in this case?
+
+        prtC.append("%(t)s  [%(r) .2f  %(fa).3f]%(sp)s" % {"r" : r, "fa" : (ang / _N.pi), "t" : cStr, "sp" : sp})
+    """
+
     if f_order == False:
         return prt[:-1]
     else:
         rks   = _N.array(_ss.rankdata(fs, method="ordinal") - 1, dtype=_N.int).tolist()   #  rank each element.  A=[3, 0, 1]  rks=[3, 1, 2]
+        vAmps = _N.array(amps)
+        #rks   = _N.array(_ss.rankdata(vAmps*-1, method="ordinal") - 1, dtype=_N.int).tolist()   #  rank each element.  A=[3, 0, 1]  rks=[3, 1, 2]
         indOrFs= [rks.index(x) for x in range(len(fs))]
-        return prt[:-1], indOrFs, _N.array(fs), _N.array(amps)
+
+        printIt = prtR
+
+        for i in range(len(prtC)):
+            printIt += prtC[indOrFs[i]]
+        return printIt, indOrFs, _N.array(fs), _N.array(amps)
 
 
 """
@@ -106,14 +119,12 @@ def initF(nR, nCS, nCN, ifs=None, ir=0.97):
                #  they seem to spread out fairly evenly in spectrum
             #th = _N.pi*(0.15 + 0.8 / (nCN - (n - nCS)))   #  above 80Hz, weak
             th = _N.pi*(0.01 + 0.01 / (nCN - (n - nCS)))   #  above 80Hz, weak
-            print(th)
             r  = (1 + _N.random.rand()) / (2 * _N.sqrt(nCN))   #  r ~ (1 / (2*nCN))
             #r  = 1.5 / (2 * _N.sqrt(nCN))   #  r ~ (1 / (2*nCN))
             #r  = 0.5+0.3*_N.random.rand()
             #r   = 0.8
         iRs[nR + 2*n]     = r*(_N.cos(th) + _N.sin(th)*1j)
         iRs[nR + 2*n + 1] = r*(_N.cos(th) - _N.sin(th)*1j)
-    print(iRs)
 
     return iRs
 

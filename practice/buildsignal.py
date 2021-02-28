@@ -4,11 +4,14 @@ from LOST.kflib import createDataAR
 
 def build_signal(N, comps, wgts):
     dt = 0.001
-    obsvd = _N.zeros(N)
+    nComps = len(comps)
+    obsvd = _N.zeros((N, nComps+1))
     ic = -1
 
     for comp in comps:
         ic += 1
+
+        print(comp)
         r_comp = comp[1]
         osc_comp = comp[0]
 
@@ -21,12 +24,17 @@ def build_signal(N, comps, wgts):
             l_alfa.append(r*(_N.cos(_N.pi*th) + 1j*_N.sin(_N.pi*th)))
             l_alfa.append(r*(_N.cos(_N.pi*th) - 1j*_N.sin(_N.pi*th)))
         for r in r_comp:
-            print(r)
             l_alfa.append(r)
 
         alfa  = _N.array(l_alfa)
         ARcoeff          = (-1*_Npp.polyfromroots(alfa)[::-1][1:]).real
-        sgnlC, y = createDataAR(N, ARcoeff, 0.000001, 0.00001)
-        obsvd += wgts[ic] * sgnlC
+        sgnlC, y = createDataAR(N, ARcoeff, 0.01, 0)
+        obsvd[:, ic] = wgts[ic]*sgnlC
+        obsvd[:, nComps] += obsvd[:, ic]
 
-    return obsvd / _N.std(obsvd)
+               
+    for ic in range(nComps):
+        obsvd[:, ic] /= _N.std(obsvd[:, nComps])
+    obsvd[:, nComps] /= _N.std(obsvd[:, nComps])
+
+    return obsvd
