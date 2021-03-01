@@ -201,7 +201,8 @@ def truncnormC(double a, double b, double u, double std):
     """
     a is left border, b is right border
     """
-    cdef double tmp, w, x, v, smps
+    cdef double tmp, w, x, v
+    cdef double smps = 0   #  standardized normal or truncnorm.  
 
     a = (a - u) / std
     b = (b - u) / std
@@ -210,8 +211,8 @@ def truncnormC(double a, double b, double u, double std):
     #  a, b both same sign, we deal only with positive side
 
     if (a <= 0) and (b > 0):
-        smps = u + std*_ss.truncnorm.rvs(a, b)
-        return smps   #  simplest case sould return quickly
+        return u + std*_ss.truncnorm.rvs(a, b)
+        #return smps   #  simplest case sould return quickly
 
     #  come here for one sided samples
     cdef int bOneSddNeg = 0

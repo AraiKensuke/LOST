@@ -36,8 +36,24 @@ ES     = None
 U      = None
 XsYs   = None
 
-cdef double *p_Xs, *p_Ys, *p_H, *p_iH, *p_mu, *p_J, *p_Ji, *p_Mji, *p_mj, *p_ujs, *p_wjs, *p_ES, *p_U, *p_Ff, *p_F0, *p_XsYs
-cdef complex *p_vfiltrootsC, *p_vfiltrootsR
+cdef double *p_Xs
+cdef double *p_Ys
+cdef double*p_H 
+cdef double *p_iH
+cdef double *p_mu
+cdef double *p_J
+cdef double *p_Ji
+cdef double *p_Mji
+cdef double *p_mj
+cdef double  *p_ujs
+cdef double  *p_wjs
+cdef double *p_ES
+cdef double *p_U
+cdef double *p_Ff
+cdef double *p_F0
+cdef double *p_XsYs
+cdef complex *p_vfiltrootsC
+cdef complex *p_vfiltrootsR
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
