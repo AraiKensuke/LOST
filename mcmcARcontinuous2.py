@@ -52,31 +52,72 @@ k     = 2*(Cn + Cs) + R
 #N     =  6000
 #N     =  600
 #N = 1200
-N = 550
+#N = 550
+N = 400
 TR    = 1
 
-dt = 0.001
+skip = 2
+Fs   = 300
+Fs_sk = Fs//skip
+#dt = 0.001
 #dt = 0.003333
 #dat    = "twoAR1l"
 #__obsvd = _N.loadtxt("practice/%s.dat" % dat)
 #__obsvd = _N.loadtxt("practice/eeg_bp.dat")
-__obsvd = _N.loadtxt("practice/eeg.dat")
+#__obsvd = _N.loadtxt("practice/eeg.dat")
+#  build 60Hz signal, sampled at 300Hz
+__obsvd = _N.loadtxt("practice/eeg_rps2.dat")
+#__obsvd = _N.loadtxt("practice/30_60_at_300.dat")
 #__obsvd = _N.loadtxt("practice/rideSlow1.dat")
-shp = __obsvd.shape
-nComps = shp[1]-1
+
+if len(__obsvd.shape) == 1:
+    nComps = 1
+    __obsvd = __obsvd.reshape((__obsvd.shape[0], 1))
+else:
+    shp = __obsvd.shape
+    nComps = shp[1]-1
+
 #nComps = 1
 #_obsvd = __obsvd[::3, nComps]
 #_obsvd = __obsvd[:, nComps]
 #_obsvd = __obsvd[::2, 0]
 #_obsvd = __obsvd[:, 0]
-_obsvd = __obsvd[::2, 15]
+#_obsvd = __obsvd[::2, 10]
+#_obsvd = __obsvd[::2, 13]   # ch2
+#_obsvd = __obsvd[::2, 0]   # ch2
+_obsvd = __obsvd[::skip, 5]   # ch2
+#_obsvd = __obsvd[::skip, 13]   # ch2
 obsvd = _N.empty((1, N+100))
 #obsvd[0] = _obsvd[4800:4800+N+100]
-obsvd[0] = _obsvd[12500:12500+N+100]
-#obsvd[0] = _obsvd[2000:2000+N+100]
+#i0       = 17000
+#i0     = 19000
+#i0     = 19100
+#i0     = 7000
+#i0     = 15000
+
+#i0     = 21000
+#i0     = 24000
+#i0     = 10000
 
 
-fSigMax       = 500.    #  fixed parameters
+#i0     = 30000
+#i0     = 29000
+#i0     = 29200
+#i0     = 29200
+i0     = 38000
+
+obsvd[0] = _obsvd[i0:i0+N+100]
+# for i0 in range(15000, 50000, 2000):
+#     i0 = i0
+#     obsvd[0] = _obsvd[i0:i0+N+100]
+
+#     fig = _plt.figure(figsize=(4, 4))
+#     _plt.suptitle(i0)
+#     #fig.add_subplot(2, 2, 1)
+#     _plt.psd(obsvd[0], Fs=Fs/2)
+
+
+fSigMax       = Fs/(2*skip)    #  fixed parameters
 #fSigMax       = 150.    #  fixed parameters
 #freq_lims     = [[1 / .85, fSigMax]]
 freq_lims     = [[0.000001, fSigMax]]*Cs
@@ -107,8 +148,8 @@ smpx        = _N.empty((TR, N+2, k))
 a_q2         = 0.5;          B_q2         = 1.
 
 MS          = 1
-ITER        = 2
-#ITER        = 1000
+#ITER        = 2
+ITER        = 1000
 
 fs           = _N.empty((ITER, Cn + Cs))
 rs           = _N.empty((ITER, R))
@@ -145,7 +186,7 @@ for it in range(ITER):
     F_alfa_rep[R:]  = alpC
     allalfas[it] = F_alfa_rep
     #F_alfa_rep = alpR + alpC   #  new constructed
-    prt, rank, f, amp = ampAngRep(F_alfa_rep, 0.001, f_order=True)
+    prt, rank, f, amp = ampAngRep(F_alfa_rep, 1./(Fs/2), f_order=True)
 
     #  reorder
     
@@ -168,10 +209,13 @@ for it in range(ITER):
             alpC[2*i+1] = alpC_tmp[2*i+1]
 
         amps[it, :]  = amp[rank]
-        fs[it, :]    = 0.5*(f[rank]/dt)
+        #fs[it, :]    = 0.5*(f[rank]/dt)
+        fs[it, :]    = f[rank] * Fs/(2*skip)
+        #fs[it, :]    = f[rank]
     else:
         amps[it, :]  = amp
-        fs[it, :]    = 0.5*(f/dt)
+        #fs[it, :]    = 0.5*(f/dt)
+        fs[it, :]    = f
 
     rs[it]       = alpR
 
@@ -190,7 +234,8 @@ for it in range(ITER):
 
 #clrs = ["black", "red", "green", "orange", "blue", "grey", "purple", "cyan", "brown"]
 
-"""
+#  f is from [0, 1]  -->  [0, Fs/2]
+#  0.2 is 30 if Fs=300    (Fs/2 * f)  is Hz
 stat_str_mn = ""
 stat_str_md = ""
 if freq_order:
@@ -206,24 +251,30 @@ fig.add_subplot(3, 1, 2)
 dx = 1./500
 #  int0^500 dx = 1
 for ic in range(Cs+Cn):
-    cnts, bins = _N.histogram(ordrd_fs[:, ic], bins=_N.linspace(0, 500, 501), density=True)
+    cnts, bins = _N.histogram(ordrd_fs[:, ic], bins=_N.linspace(0, Fs/(2*skip), 101), density=True)
     _plt.plot(0.5*(bins[0:-1] + bins[1:]), cnts + (1./500)*2)#, color=clrs[ic])
     
     stat_str_mn += "%.1f   " % _N.mean(ordrd_fs[:, ic])
     stat_str_md += "%.1f   " % _N.median(ordrd_fs[:, ic])
     _plt.axvline(x=_N.mean(ordrd_fs[:, ic]), ls=":")#, color=clrs[ic])
-_plt.xlim(0, 500)
+_plt.xlim(0, Fs/(2*skip))
 fig.add_subplot(3, 1, 3)
 _plt.hist(rs, bins=_N.linspace(-1, 1, 201))
 
 _plt.suptitle("freq_order %(fo)s\n%(mn)s\n%(md)s\n" % {"fo" : str(freq_order), "mn" : stat_str_mn, "md" : stat_str_md})
 
 
+fig = _plt.figure(figsize=(10, 10))
+fig.add_subplot(2, 2, 1)
+_plt.psd(obsvd[0], Fs=Fs/2)
+
 rts, zts = getComponents(uts, wts, allalfas, 0, ITER)
+mn_zts  = _N.mean(zts[200:, 0, :, :, 0], axis=0)
 #c1 = __obsvd[::3, 0]
 
 z_stds = _N.std(zts[:, 0, :, :, 0], axis=1)
 r_stds = _N.std(rts[:, 0, :, :, 0], axis=1)
 
 
-"""
+
+

@@ -165,10 +165,10 @@ def ARroots(arC):
 
     N   = len(arC)   # polynomial degree       a_1 B + a_2 B^2
     arr = _N.empty(N+1)
-#    arr[0:N] = arC[::-1]   #  For Wikipedia
-#    arr[N]   = -1
-    arr[1:N+1] = -1*arC
-    arr[0]   = 1
+    arr[0:N] = arC[::-1]   #  For Wikipedia
+    arr[N]   = -1
+    # arr[1:N+1] = -1*arC
+    # arr[0]   = 1
 
     bBdd = True
     iBdd = 1
