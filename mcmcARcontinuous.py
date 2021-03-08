@@ -8,13 +8,13 @@ import matplotlib.pyplot as _plt
 
 ram = True
 import numpy as _N
-_N.random.seed(12)
+#_N.random.seed(12)
 
 if ram:
     import LOST.ARcfSmplNoMCMC_ram as _arcfs
 else:
-    import LOST.ARcfSmplNoMCMC as _arcfs
-from LOST.ARcfSmplNoMCMC import ARcfSmpl, FilteredTimeseries
+    #import LOST.ARcfSmplNoMCMC as _arcfs
+    import LOST.ARcfSmplFlatf as _arcfs
 
 def getComponents(uts, wts, allalfas, it0, it1):
     ddN   = N
@@ -38,17 +38,17 @@ def getComponents(uts, wts, allalfas, it0, it1):
     return rts, zts
 
 
-freq_order    = False
+freq_order    = True
 ARord         = _cd.__NF__
 
 #  guessing AR coefficients of this form
-Cn      = 8   # noise components
-Cs      = 4
-R       = 3
+Cn      = 0   # noise components
+Cs      = 19
+R       = 1
 
 k     = 2*(Cn + Cs) + R
-#N     =  6000
-N     =  2000 
+N     =  10000
+#N     =  3000
 TR    = 1
 
 dt = 0.001
@@ -56,16 +56,24 @@ dt = 0.001
 #dat    = "twoAR1l"
 #__obsvd = _N.loadtxt("practice/%s.dat" % dat)
 #__obsvd = _N.loadtxt("practice/eeg.dat")
-__obsvd = _N.loadtxt("practice/rideSlow3.dat")
+#__obsvd = _N.loadtxt("practice/oneAR2.dat")
+#__obsvd = _N.loadtxt("practice/singleAR4_1_1.dat")
+__obsvd = _N.loadtxt("practice/threeAR1_1_1.dat")
+#__obsvd = _N.loadtxt("practice/singleAR2_4_1.dat")
 shp = __obsvd.shape
 nComps = shp[1]-1
-_obsvd = __obsvd[::3, nComps]
+
+#nComps = 1
+#_obsvd = __obsvd#[::3]
+_obsvd = __obsvd[:, nComps]#[::3]
+_cmpts = __obsvd[:, 0:nComps]#[::3]
+#_obsvd = __obsvd[::3, nComps]
 #_obsvd = __obsvd[:, nComps]
 #_obsvd = __obsvd[:, 0]
 obsvd = _N.empty((1, N+100))
 #obsvd[0] = _obsvd[5000:5000+N+100]
-obsvd[0] = _obsvd[1000:1000+N+100]
-
+obsvd[0] = _obsvd[0:0+N+100]
+cmpts = _cmpts[0:0+N+100, 0:nComps]#[::3]
 
 fSigMax       = 500.    #  fixed parameters
 #fSigMax       = 150.    #  fixed parameters
@@ -73,11 +81,13 @@ fSigMax       = 500.    #  fixed parameters
 freq_lims     = [[0.000001, fSigMax]]*Cs
 
 sig_ph0L      = -1
-sig_ph0H      = -(0.05*0.05)#95*0.95)   #  
+#sig_ph0H      = -(0.0*0.0)#95*0.95)   #  
+sig_ph0H      = -(0.3*0.3)   #  
 #sig_ph0H      = -(0.9*0.9)   #
 
 radians      = buildLims(Cn, freq_lims, nzLimL=1.)
 AR2lims      = 2*_N.cos(radians)
+
 
 F_alfa_rep  = initF(R, Cs, Cn).tolist()   #  init F_alfa_rep
 
@@ -94,11 +104,11 @@ q2          = _N.array([0.01])
 smpx        = _N.empty((TR, N+2, k))
 
 #  q2  --  Inverse Gamma prior
-a_q2         = 0.5;          B_q2         = 1e-2
+a_q2         = 0.5;          B_q2         = 1
 
 MS          = 1
-ITER        = 500
-#ITER        = 100
+#ITER        = 10
+ITER        = 2000
 
 fs           = _N.empty((ITER, Cn + Cs))
 rs           = _N.empty((ITER, R))
@@ -125,6 +135,9 @@ if ram:
               smpx[:, 0:, 0:k-1])
 
 allalfas     = _N.empty((ITER, k), dtype=_N.complex)
+
+xx           = _N.empty(k)
+
 for it in range(ITER):
     if ram:
         uts[it], wts[it] = _arcfs.ARcfSmpl(N, k, 1, AR2lims, smpx_contiguous1, smpx_contiguous2, q2, R, Cs, Cn, alpR, alpC, sig_ph0L, sig_ph0H)
@@ -140,7 +153,7 @@ for it in range(ITER):
     #  reorder
     
     if it % 50 == 0:
-        print("-----------------")
+        print("%d  -----------------" % it)
         print(prt)
     
     if freq_order:
@@ -164,12 +177,58 @@ for it in range(ITER):
     rs[it]       = alpR
 
     F0          = (-1*_Npp.polyfromroots(F_alfa_rep)[::-1].real)[1:]
+    #F0          = _Narray([1.9761, -0.9801])#(-1*_Npp.polyfromroots(F_alfa_rep)[::-1].real)[1:]
 
     a2 = a_q2 + 0.5*(TR*N + 2)  #  N + 1 - 1
     BB2 = B_q2
+
     for m in range(TR):
         #   set x00 
-        rsd_stp = smpx[m, 3:,0] - _N.dot(smpx[m, 2:-1], F0).T
+        # y  = obsvd[0, k:]
+        # x1 = obsvd[0, k-1:-1]
+        # x2 = obsvd[0, k-2:-2]
+        # x3 = obsvd[0, k-3:-3]
+        # x4 = obsvd[0, k-4:-4]
+        # x5 = obsvd[0, k-5:-5]
+        # x6 = obsvd[0, k-6:-6]
+        # x7 = obsvd[0, k-7:-7]
+        # x8 = obsvd[0, k-8:-8]
+        # x9 = obsvd[0, k-9:-9]
+        # x10 = obsvd[0, k-10:-10]
+        # x11 = obsvd[0, k-11:-11]
+        # x12 = obsvd[0, k-12:-12]
+        # x13 = obsvd[0, k-13:-13]
+        # x14 = obsvd[0, k-14:-14]
+        # x15 = obsvd[0, k-15:-15]
+        # x16 = obsvd[0, k-16:-16]
+        # x17 = obsvd[0, k-17:-17]
+        # x18 = obsvd[0, k-18:-18]
+
+        #  x2[0] 
+        # x18[0] = smpx[0, 2, 0]
+        # ...
+        # x4[0] = smpx[0, 16, 0]
+        # x3[0] = smpx[0, 17, 0]
+        # x2[0] = smpx[0, 18, 0]
+        # x1[0] = smpx[0, 19, 0]
+        ###################################3
+        #  x18[0] = smpx[0, 2, 0]    ##  OLDEST
+        #  x17[0] = smpx[0, 2, 1]
+        #  x16[0] = smpx[0, 2, 2]
+        #...
+        #  x1[0]  = smpx[0, 2, 17]   ##  NEWEST
+
+        #F0 = _N.array([ 3.71118015, -5.38889359,  3.63732766, -0.96059601])
+        # = _N.array([1.97609292, -0.9801])
+        #rsd_stp = y - (x1 * F0[0] + x2 * F0[1])
+        # rsd_stp = y - (x1 * F0[0] + x2 * F0[1] + x3 * F0[2] + x4 * F0[3] + x5 * F0[4] + x6 * F0[5] + x7 * F0[6] + x8 * F0[7] + x9*F0[8] + x10*F0[9] + x11*F0[10] + x12*F0[11] + x13*F0[12] + x14*F0[13] + x15*F0[14] + x16*F0[15] + x17*F0[16] + x18*F0[17])
+
+        rsd_stp = smpx[m, 3:,k-1] - _N.dot(smpx[m, 2:-1], F0[::-1]).T
+        # print(rsd_stp[0:10])
+        # print(diffs[0:10])
+        # print("if know GT coeffs, innovation variance:  %(1).4f   %(2).4f" % {"1
+        #" : (_N.std(diffs)**2), "2" : (_N.std(rsd_stp)**2)})
+
         BB2 += 0.5 * _N.dot(rsd_stp, rsd_stp.T)
     q2[:] = _ss.invgamma.rvs(a2, scale=BB2)
 
@@ -206,6 +265,31 @@ _plt.hist(rs, bins=_N.linspace(-1, 1, 201))
 _plt.suptitle("freq_order %(fo)s\n%(mn)s\n%(md)s\n" % {"fo" : str(freq_order), "mn" : stat_str_mn, "md" : stat_str_md})
 
 
-# rts, zts = getComponents(uts, wts, allalfas, 1999, 2000)
-# c1 = __obsvd[::3, 0]
+it0=0
+it1=2000
+__rts, __zts = getComponents(uts, wts, allalfas, it0, it1)
+_rts = __rts[:, 0, 1:, :, 0]
+_zts = __zts[:, 0, 1:, :, 0]
+zts = _N.mean(_zts[it0:it1], axis=0)
+rts = _N.mean(_rts[it0:it1], axis=0)
 
+all_zts = _N.sum(_zts, axis=2)
+
+obsvd_r = obsvd[0, 0:N].reshape((1, N))
+
+ss = _N.std(obsvd_r - all_zts, axis=1)
+smax = _N.where(ss == _N.max(ss))[0][0]
+
+fig = _plt.figure(figsize=(9, 9))
+fig.add_subplot(3, 1, 1)
+_plt.plot(obsvd[0], lw=3, color="black")
+_plt.plot(all_zts[smax], color="grey")
+fig.add_subplot(3, 1, 2)
+_plt.plot(obsvd[0], lw=3, color="black")
+_plt.plot(all_zts[smax-1], color="grey")
+fig.add_subplot(3, 1, 3)
+_plt.plot(obsvd[0], lw=3, color="black")
+_plt.plot(all_zts[smax+1], color="grey")
+
+
+amps = _N.std(all_zts, axis=1)

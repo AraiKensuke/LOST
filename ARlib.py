@@ -172,7 +172,8 @@ def ARroots(arC):
 
     bBdd = True
     iBdd = 1
-    roots = _N.polynomial.polynomial.polyroots(arr)
+    # coefficients:  arr[0] for x^0, arr[1] for x^1, arr[2] for x^2
+    roots = _N.polynomial.polynomial.polyroots(arr) 
     mag     = _N.empty(N)
     #  stable when roots (eigenvalues) are within unit circle
     for r in range(N):

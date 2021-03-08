@@ -2,7 +2,7 @@ import numpy as _N
 import numpy.polynomial.polynomial as _Npp
 from LOST.kflib import createDataAR
 
-def build_signal(N, comps, wgts):
+def build_signal(N, comps, wgts, innovation_var=0.01, normalize=True):
     dt = 0.001
     nComps = len(comps)
     obsvd = _N.zeros((N, nComps+1))
@@ -28,13 +28,17 @@ def build_signal(N, comps, wgts):
 
         alfa  = _N.array(l_alfa)
         ARcoeff          = (-1*_Npp.polyfromroots(alfa)[::-1][1:]).real
-        sgnlC, y = createDataAR(N, ARcoeff, 0.01, 0)
+        sgnlC, y = createDataAR(N, ARcoeff, innovation_var, 0)
         obsvd[:, ic] = wgts[ic]*sgnlC
+
         obsvd[:, nComps] += obsvd[:, ic]
 
-               
-    for ic in range(nComps):
-        obsvd[:, ic] /= _N.std(obsvd[:, nComps])
-    obsvd[:, nComps] /= _N.std(obsvd[:, nComps])
+    if normalize:
+        for ic in range(nComps):
+            obsvd[:, ic] /= _N.std(obsvd[:, nComps])
+        obsvd[:, nComps] /= _N.std(obsvd[:, nComps])
 
-    return obsvd
+    if len(comps) == 1:
+        return ARcoeff, obsvd
+    else:
+        return obsvd
