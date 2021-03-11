@@ -5,6 +5,7 @@ import matplotlib.pyplot as _plt
 from LOST.filter import gauKer
 import scipy.stats as _ss
 import pickle
+import numpy.polynomial.polynomial as _Npp
 
 def createFlucOsc(f0, f0VAR, N, dt0, TR, Bf=[0.99], Ba=[0.99], amp=1, amp_nz=0, stdf=None, stda=None, sig=0.1, smoothKer=0, dSF=5, dSA=5):
     """
@@ -798,3 +799,31 @@ def downsamplespkdat(dat, isipctl, max_evry=3):
     dnew_rs[x, y] = 1
 
     return evry, dnew_rs
+
+
+def ARcoeff(modulus_fs, Fs):
+    alfa = alfarep(modulus_fs, Fs)
+    ARcoeff          = (-1*_Npp.polyfromroots(alfa)[::-1][1:]).real
+    return ARcoeff
+
+def alfarep(modulus_fs, Fs):
+    """
+    modulus can also be negative if th == 0
+    """
+    dt = 1./Fs
+    l_alfa = []
+    for mod_f in modulus_fs:
+        hz = mod_f[1]
+        r = mod_f[0]
+
+        if hz != 0:
+            th = 2*hz*dt
+        
+            l_alfa.append(r*(_N.cos(_N.pi*th) + 1j*_N.sin(_N.pi*th)))
+            l_alfa.append(r*(_N.cos(_N.pi*th) - 1j*_N.sin(_N.pi*th)))
+        else:
+            l_alfa.append(r)
+
+    alfa  = _N.array(l_alfa)
+
+    return alfa

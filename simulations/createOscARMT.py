@@ -44,6 +44,7 @@ def create(outdir):
 
     if bGenOscUsingAR:
         ARcoeff = _N.empty((nRhythms, 2))
+
         for n in range(nRhythms):
             ARcoeff[n]          = (-1*_Npp.polyfromroots(alfa[n])[::-1][1:]).real
         stNzs   = _N.empty((TR, nRhythms))
@@ -69,10 +70,6 @@ def create(outdir):
                 csTR[tr] = 0
             else:
                 csTR[tr] = 1
-
-
-
-
 
     #  x, prbs, spks    3 columns
     nColumns = 3

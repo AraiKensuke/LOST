@@ -138,7 +138,7 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
 @cython.wraparound(False)
 @cython.cdivision(True)
 #def ARcfSmpl(int N, int k, int TR, double[:, ::1] AR2lims, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, int sig_ph0L, int sig_ph0H):
-def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, double sig_ph0L, double sig_ph0H):
+def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, double sig_ph0L, double sig_ph0H, double prR_s2):
     global ujs, wjs, Ff, F0, Xs, Ys, XsYs, H, iH, mu, J, Ji, Mj, Mji, mj, filtrootsC, filtrootsR, arInd
     global p_vfiltrootsC, p_vfiltrootsR
 
@@ -193,6 +193,7 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
     cdef double iH00, iH01, iH10, iH11, div, idiv
     cdef double svPr1, svPr2, vPr1, vPr2
     cdef double JR, JiR, UR, tot, iq2, r1, ph0j1, ph0j2, rj
+    cdef double upos, spos
     cdef complex img
 
     iq2 = 1./p_q2[0]
@@ -478,7 +479,12 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
         #  [-4.20680826]]
         # Traceback (most recent call last):
         ##   Above traceback identical between run when there is an error and when there isn't.  Xs[::50, 0] and Xs[::50, 1] and Ys[::50]
-        rj = _kd.truncnormC(-1., 1., UR, sqrt(JR))
+        #  (0 x 1/prR_s2) + (UR/JR) / (1/prR_s2 + 1/JR)
+        #  prR_s2*JR / (prR_s2 + JR)
+        upos = (UR/JR) / (1/prR_s2 + 1/JR)
+        spos = (prR_s2*JR) / (prR_s2 + JR)
+        #rj = _kd.truncnormC(-1., 1., UR, sqrt(JR))
+        rj = _kd.truncnormC(-1., 1., upos, sqrt(spos))
 
         #alpR.insert(j, rj)
         p_valpR[j] = rj
