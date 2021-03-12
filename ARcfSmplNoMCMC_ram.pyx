@@ -211,12 +211,12 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
     #print("ARcfSmpNoMCMC_ram  Starting q2:  %.4e" % p_q2[0])
     #for 0 <= c < C:
     for C-1 >= c > -1:
-        if c >= Cs:
-            ph0L = -1
-            ph0H = 0
-        else:
-            ph0L = sig_ph0L   # 
-            ph0H = sig_ph0H #  R=0.97, reasonably oscillatory
+        #if c >= Cs:
+        ph0L = -1
+        ph0H = 0
+        # else:
+        #    ph0L = sig_ph0L   # 
+        #    ph0H = sig_ph0H #  R=0.97, reasonably oscillatory
             
         j = 2*c + 1
         p1a =  p_AR2lims[2*c]

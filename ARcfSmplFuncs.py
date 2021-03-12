@@ -253,21 +253,21 @@ def dcmpcff(alfa):
 
 #     return rM1, rM2
 
-def buildLims(Cn, freq_lims, nzLimL=90.):
+def buildLims(Cn, freq_lims, nzLimL=90., Fs=1000):
     Ns   = len(freq_lims)   #  # of signal components
     radians = _N.zeros((Ns + Cn, 2))
     twpi = 2*_N.pi
 
     for ns in range(Ns):
-        wlL = 1000. / freq_lims[ns][0]     #  wavelength of low frequency
-        wlH = 1000. / freq_lims[ns][1]
+        wlL = Fs / freq_lims[ns][0]     #  wavelength of low frequency
+        wlH = Fs / freq_lims[ns][1]
         p1a =  twpi/wlH    # 2pi / lamba
         p1b =  twpi/wlL
 
         radians[ns, 0] = p1a; radians[ns, 1] = p1b
     for ns in range(Cn):
-        wlL = 1000. / nzLimL     #  "noise" from 90Hz
-        wlH = 1000. / 500.
+        wlL = Fs / nzLimL     #  "noise" from 90Hz
+        wlH = Fs / (Fs/2)
         p1a =  twpi/wlH
         p1b =  twpi/wlL
 
