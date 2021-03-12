@@ -9,7 +9,6 @@ import mne
 
 ram = True
 import numpy as _N
-#_N.random.seed(12)
 
 if ram:
     import LOST.ARcfSmplNoMCMC_ram as _arcfs
@@ -17,6 +16,7 @@ else:
     import LOST.ARcfSmplNoMCMC as _arcfs
     #import LOST.ARcfSmplFlatf as _arcfs
 
+class mcmc
 def getComponents(uts, wts, allalfas, it0, it1, skp):
     ddN   = N
     
@@ -74,7 +74,7 @@ ARord         = _cd.__NF__
 
 #  guessing AR coefficients of this form
 Cn      = 0   # noise components
-Cs      = 8
+Cs      = 10
 R       = 1
 
 k     = 2*(Cn + Cs) + R
@@ -90,9 +90,10 @@ Fs = 300
 dt = 0.003333
 #dat    = "twoAR1l"
 #__eeg = _N.loadtxt("practice/eeg_w_hi.dat")
-__eeg = _N.loadtxt("practice/eeg_rps2.dat")
-t0    = 14000
-#t0    = 6000
+#__eeg = _N.loadtxt("practice/eeg_rps2.dat")
+__eeg = _N.loadtxt("practice/eeg.dat")
+#t0    = 14000
+t0    = 12000
 __obsvd = __eeg[t0:t0+N+100, 0]
 
 #__obsvd = __eeg[300:11100, 0]
@@ -121,6 +122,7 @@ obsvd = _N.empty((1, N+100))
 #obsvd[0] = _obsvd[5000:5000+N+100]
 obsvd[0] = _obsvd[0:0+N+100]
 cmpts = _cmpts[0:0+N+100, 0:nComps]#[::3]
+
 
 hpf = True
 fSigMax       = Fs//2    #  fixed parameters
@@ -181,7 +183,7 @@ a_q2         = 1.;          B_q2         = 0.1
 
 MS          = 1
 #ITER        = 5000
-ITER        = 1000
+ITER        = 3000
 
 skp          = 50    #  we can quickly approach > 10 GB if we store all.
 fs           = _N.empty((ITER//skp, Cn + Cs))
@@ -331,7 +333,4 @@ zts = _N.mean(_zts[it0:it1], axis=0)
 rts = _N.mean(_rts[it0:it1], axis=0)
 
 #show(N, Cs+Cn, obsvd, zts, t0=1000, t1=2000)
-
-
-
 
