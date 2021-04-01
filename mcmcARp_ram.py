@@ -11,11 +11,14 @@ import numpy.polynomial.polynomial as _Npp
 import time as _tm
 import LOST.ARlib as _arl
 
-cython_inv = True
-if cython_inv == False:
+cython_inv_v = 5  #  
+if cython_inv_v == 2:
     import LOST.kfARlibMPmv_ram2 as _kfar
-else:
+elif cython_inv_v == 3:
     import LOST.kfARlibMPmv_ram3 as _kfar
+elif cython_inv_v == 5:
+    import LOST.kfARlibMPmv_ram5 as _kfar
+
 import pyPG as lw
 
 cython_arc = True
@@ -255,7 +258,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         #  oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1]
         smpx_contiguous1        = _N.zeros((oo.TR, oo.N + 2, oo.k))
         smpx_contiguous2        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k-1))
-        if cython_inv:
+        if (cython_inv_v == 3) or (cython_inv_v == 5):
             oo.if_V = _N.array(oo.f_V)
             oo.chol_L_fV = _N.array(oo.f_V)
         ######  Gibbs sampling procedure
@@ -451,10 +454,10 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
                     #print(oo.Fs)
                     #print(_N.linalg.inv(oo.Fs))
-                    if cython_inv:
-                        _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.chol_L_fV, oo.if_V, oo.p_x, oo.p_V, smpx_C_cont, K)
-                    else:
+                    if (cython_inv_v == 2):
                         _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.p_x, oo.p_V, smpx_C_cont, K)
+                    else:
+                        _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.chol_L_fV, oo.if_V, oo.p_x, oo.p_V, smpx_C_cont, K)
 
                     oo.smpx[:, 2:]           = smpx_C_cont
                     oo.smpx[:, 1, 0:ook-1]   = oo.smpx[:, 2, 1:]
