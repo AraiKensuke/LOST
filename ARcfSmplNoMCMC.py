@@ -96,9 +96,12 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
 
         ##########  CREATE FILTERED TIMESERIES   ###########
         ##########  Frmj is k x k, smpxW is (N+2) x k ######
+        #print(Ff)
 
         for m in range(TR):
             _N.dot(smpxW[m], Ff.T, out=wjs[m, c])
+            #print(smpxW[m, -100:])
+            #print(wjs[m, c, -100:])
             #_N.savetxt("%(2)d-%(1)d" % {"2" : aro, "1" : c}, wjs[m, c])
             #_plt.figure(figsize=(15, 4))
             #_plt.plot(wjs[m, c, 1000:1300])
@@ -129,6 +132,8 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         J[1,0]=-Ji[1,0];J[0,1]=-Ji[0,1];
         J         /= (Ji[0,0]*Ji[1,1]-Ji[0,1]*Ji[1,0])
 
+        #print(iH)
+        #print(mu)
         U   = _N.dot(J, _N.einsum("tij,tjk->ik", iH, mu))
 
 
@@ -149,7 +154,7 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         mu0prp = U[0, 0]
 
         tttB = _tm.time()
-        # print("ph0L  %(L).4f  ph1L  %(H).4f   %(u).4f   %(s).4f" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s" : svPr2})
+        #print("ph0L  %(L).4f  ph1L  %(H).4f   %(u).4f   %(s).4f" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s" : svPr2})
 
         #ph0j2 = _kd.truncnormC(a=ph0L, b=ph0H, u=mu1prp, std=svPr2)
         ph0j2 = _kd.truncnormC(ph0L, ph0H, mu1prp, svPr2)
@@ -175,7 +180,6 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         ttt2a += tttB - tttA
         ttt2b += tttC - tttB
 
-
     Ff  = _N.zeros((1, k))
     ######     REAL ROOTS.  Directly sample the conditional posterior
     for j in range(R - 1, -1, -1):
@@ -185,6 +189,7 @@ def ARcfSmpl(N, k, AR2lims, smpxU, smpxW, q2, R, Cs, Cn, alpR, alpC, TR, accepts
         Frmj = _Npp.polyfromroots(alpR + alpC).real #  Ff first element k-delay
         Ff[0, :] = Frmj[::-1]   #  Prod{i neq j} (1 - alfa_i B)
 
+        #print(Ff)
         ##########  CREATE FILTERED TIMESERIES   ###########
         ##########  Frmj is k x k, smpxU is (N+1) x k ######
 

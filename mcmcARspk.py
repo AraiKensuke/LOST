@@ -22,6 +22,7 @@ import matplotlib.pyplot as _plt
 class mcmcARspk(mAR.mcmcAR):
     ##  
     psthBurns     = 5
+    k             = None
     Cn            = None;    Cs            = None;    C             = None
     kntsPSTH      = None;    dfPSTH        = None
     ID_q2         = False
@@ -79,7 +80,7 @@ class mcmcARspk(mAR.mcmcAR):
 
     #  coefficient sampling
     fSigMax       = 500.    #  fixed parameters
-    freq_lims     = [[1 / .85, fSigMax]]
+    #freq_lims     = [[1 / .85, fSigMax]]
     sig_ph0L      = -1
     sig_ph0H      = 0
 
@@ -168,6 +169,12 @@ class mcmcARspk(mAR.mcmcAR):
             print("NO downsamp")
         oo.evry     = evry
         oo.dt *= oo.evry
+        oo.fSigMax = 0.5/oo.dt
+        print("fSigMax   %.3f" % oo.fSigMax)
+        oo.freq_lims     = [[0.000001, oo.fSigMax]]*oo.C
+        print(oo.freq_lims)
+
+        print("oo.dt   %.3f" % oo.dt)
 
         print("!!!!!!!!!!!!!!!!!!!!!!   evry    %d" % evry)
 
@@ -312,7 +319,7 @@ class mcmcARspk(mAR.mcmcAR):
         oo.smp_q2       = _N.zeros((iters, oo.TR))
         #  store samples of
 
-        oo.allalfas     = _N.empty((iters, oo.k), dtype=_N.complex)
+        oo.allalfas     = _N.zeros((iters, oo.k), dtype=_N.complex)
         if oo.pkldalfas is not None:
             oo.allalfas[0]  = oo.pkldalfas
             for r in range(oo.R):
@@ -321,8 +328,8 @@ class mcmcARspk(mAR.mcmcAR):
                 oo.F_alfa_rep[oo.R+2*c]   = oo.pkldalfas[oo.R+2*c]
                 oo.F_alfa_rep[oo.R+2*c+1] = oo.pkldalfas[oo.R+2*c + 1]
             print(oo.F_alfa_rep)
-        #oo.uts          = _N.empty((oo.TR, iters, oo.R, oo.N+2))
-        #oo.wts          = _N.empty((oo.TR, iters, oo.C, oo.N+3))
+        oo.uts          = _N.empty((iters//oo.BsmpxSkp, oo.TR, oo.R, oo.N+1+1, 1))
+        oo.wts          = _N.empty((iters//oo.BsmpxSkp, oo.TR, oo.C, oo.N+2+1, 1))
         oo.ranks        = _N.empty((iters, oo.C), dtype=_N.int)
         oo.fs           = _N.empty((iters, oo.C))
         oo.amps         = _N.empty((iters, oo.C))
@@ -370,7 +377,9 @@ class mcmcARspk(mAR.mcmcAR):
 
         #  baseFN_inter   baseFN_comps   baseFN_comps
 
-        radians      = buildLims(oo.Cn, oo.freq_lims, nzLimL=1.)
+        print("freq_lims")
+        print(oo.freq_lims)
+        radians      = buildLims(0, oo.freq_lims, nzLimL=1., Fs=(1/oo.dt))
         oo.AR2lims      = 2*_N.cos(radians)
 
         oo.smpx        = _N.zeros((oo.TR, (oo.N + 1) + 2, oo.k))   #  start at 0 + u
@@ -379,7 +388,9 @@ class mcmcARspk(mAR.mcmcAR):
         #############   ADDED THIS FOR DEBUG
         #oo.F_alfa_rep = _N.array([-0.4       +0.j,          0.96999828+0.00182841j,  0.96999828-0.00182841j, 0.51000064+0.02405102j,  0.51000064-0.02405102j,  0.64524011+0.04059507j, 0.64524011-0.04059507j]).tolist()
         if oo.F_alfa_rep is None:
-            oo.F_alfa_rep  = initF(oo.R, oo.Cs, oo.Cn, ifs=oo.ifs).tolist()   #  init F_alfa_rep
+            oo.F_alfa_rep  = initF(oo.R, oo.Cs+oo.Cn, 0).tolist()   #  init F_alfa_rep
+        print("F_alfa_rep*********************")
+        print(oo.F_alfa_rep)
 
         #print(ampAngRep(oo.F_alfa_rep))
         if oo.q20 is None:
@@ -389,9 +400,6 @@ class mcmcARspk(mAR.mcmcAR):
         oo.F0          = (-1*_Npp.polyfromroots(oo.F_alfa_rep)[::-1].real)[1:]
         oo.Fs    = _N.zeros((oo.TR, oo.k, oo.k))
 
-        print(oo.k)
-        print(oo.F0.shape)
-        print(oo.F.shape)
         oo.F[0] = oo.F0
         _N.fill_diagonal(oo.F[1:, 0:oo.k-1], 1)
 
@@ -481,34 +489,35 @@ class mcmcARspk(mAR.mcmcAR):
 
             ARo[m, 0:sts[0]+1] = hcrv[isiHiddenPrt:isiHiddenPrt + sts[0]+1]
 
-    def getComponents(self):
-        oo    = self
-        TR    = oo.TR
-        NMC   = oo.NMC
-        burn  = oo.burn
-        R     = oo.R
-        C     = oo.C
-        ddN   = oo.N
 
-        oo.rts = _N.empty((TR, burn+NMC, ddN+2, R))    #  real components   N = ddN
-        oo.zts = _N.empty((TR, burn+NMC, ddN+2, C))    #  imag components 
+    # def getComponents(self):
+    #     oo    = self
+    #     TR    = oo.TR
+    #     NMC   = oo.NMC
+    #     burn  = oo.burn
+    #     R     = oo.R
+    #     C     = oo.C
+    #     ddN   = oo.N
 
-        for tr in range(TR):
-            for it in range(1, burn + NMC):
-                b, c = dcmpcff(alfa=oo.allalfas[it])
-                print(b)
-                print(c)
-                for r in range(R):
-                    oo.rts[tr, it, :, r] = b[r] * oo.uts[tr, it, r, :]
+    #     oo.rts = _N.empty((TR, burn+NMC, ddN+2, R))    #  real components   N = ddN
+    #     oo.zts = _N.empty((TR, burn+NMC, ddN+2, C))    #  imag components 
 
-                for z in range(C):
-                    #print "z   %d" % z
-                    cf1 = 2*c[2*z].real
-                    gam = oo.allalfas[it, R+2*z]
-                    cf2 = 2*(c[2*z].real*gam.real + c[2*z].imag*gam.imag)
-                    oo.zts[tr, it, 0:ddN+2, z] = cf1*oo.wts[tr, it, z, 1:ddN+3] - cf2*oo.wts[tr, it, z, 0:ddN+2]
+    #     for tr in range(TR):
+    #         for it in range(1, burn + NMC):
+    #             b, c = dcmpcff(alfa=oo.allalfas[it])
+    #             print(b)
+    #             print(c)
+    #             for r in range(R):
+    #                 oo.rts[tr, it, :, r] = b[r] * oo.uts[tr, it, r, :]
 
-        oo.zts0 = _N.array(oo.zts[:, :, 1:, 0], dtype=_N.float16)
+    #             for z in range(C):
+    #                 #print "z   %d" % z
+    #                 cf1 = 2*c[2*z].real
+    #                 gam = oo.allalfas[it, R+2*z]
+    #                 cf2 = 2*(c[2*z].real*gam.real + c[2*z].imag*gam.imag)
+    #                 oo.zts[tr, it, 0:ddN+2, z] = cf1*oo.wts[tr, it, z, 1:ddN+3] - cf2*oo.wts[tr, it, z, 0:ddN+2]
+
+    #     oo.zts0 = _N.array(oo.zts[:, :, 1:, 0], dtype=_N.float16)
 
     def CIF(self, gibbsIter=0):
         """
@@ -599,7 +608,12 @@ class mcmcARspk(mAR.mcmcAR):
         pcklme["frm"]    = frm
         pcklme["evry"]    = oo.evry
         pcklme["B"]    = oo.B
+        pcklme["R"]    = oo.R
+        pcklme["C"]    = oo.C
+        pcklme["k"]    = oo.k
         pcklme["BsmpxSkp"]    = oo.BsmpxSkp
+        pcklme["rts"]    = _N.array(oo.rts, dtype=_N.float16)  #  resolution about 1e-6.  So as long as signal amplitude about 0.1, this is not a problem
+        pcklme["zts"]    = _N.array(oo.zts, dtype=_N.float16)
         pcklme["toiter"]      = toiter
         pcklme["q2"]   = oo.smp_q2[0:toiter:oo.BsmpxSkp]
         pcklme["amps"] = oo.amps[0:toiter:oo.BsmpxSkp]
@@ -616,7 +630,7 @@ class mcmcARspk(mAR.mcmcAR):
             pcklme["Hbf"]    = oo.Hbf
             pcklme["h_coeffs"]    = oo.smp_hS[0:toiter:oo.BsmpxSkp]
         if oo.doBsmpx:
-            pcklme["Bsmpx"]    = oo.Bsmpx[0:toiter//oo.BsmpxSkp]
+            pcklme["Bsmpx"]    = _N.array(oo.Bsmpx[0:toiter//oo.BsmpxSkp], dtype=_N.float16)
 
         #cifs = _N.empty((oo.TR, oo.N
         #for it 
@@ -634,3 +648,4 @@ class mcmcARspk(mAR.mcmcAR):
         # import pickle
         # with open("smpls.dump", "rb") as f:
         # lm = pickle.load(f)
+        

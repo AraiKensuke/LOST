@@ -3,6 +3,7 @@ from shutil import copyfile
 from LOST.utildirs import setFN
 from LOST.mcmcARpPlot import plotWFandSpks
 import matplotlib.pyplot as _plt
+import LOST.practice.buildsignal as _blds
 
 from LOST.kflib import createDataPPl2, savesetMT, savesetMTnosc, createDataAR, createFlucOsc
 from LOST.LOSTdirs import resFN, datFN
@@ -15,7 +16,7 @@ import utilities as _U
 TR         = None;     N        = None;      dt       = 0.001
 trim       = 50;
 nzs        = None;     nRhythms = None;
-rs         = None;     ths      = None;      alfa     = None;
+modulus_fs    = None;
 lambda2    = None;     psth     = None
 lowQpc     = 0;        lowQs    = None
 isis       = None;     rpsth    = None
@@ -36,24 +37,23 @@ def create(outdir):
     # _plt.ioff()
     global dt, lambda2, rpsth, isis, us, csTR, etme, bGenOscUsingAR, f0VAR, f0, Bf, Ba, amp, amp_nz, dSA, dSF, psth, prbs, prbsWithHist, latst
     latst = _N.empty((TR, N))
+
     prbsWithHist = _N.empty((TR, N))
     lowQs = []
 
-    if csTR is None:
+
+    if (csTR is None) or (csTR.shape[0] != TR):
         csTR = _N.ones(TR)
 
     if bGenOscUsingAR:
-        ARcoeff = _N.empty((nRhythms, 2))
+        nRhythms = len(modulus_fs)
+        AR_components      = _N.empty((TR, nRhythms, N))
 
-        for n in range(nRhythms):
-            ARcoeff[n]          = (-1*_Npp.polyfromroots(alfa[n])[::-1][1:]).real
-        stNzs   = _N.empty((TR, nRhythms))
+        ARcoeffs          = _blds.ARcoeffsFromList(modulus_fs, dt=0.001)
+
         for tr in range(TR):
             if _N.random.rand() < lowQpc:
                 lowQs.append(tr)
-                stNzs[tr] = nzs[:, 0]
-            else:
-                stNzs[tr] = nzs[:, 1]    #  high
     elif bGenOscUsingSines:
         if f0VAR is None:
             f0VAR   = _N.zeros(TR)
@@ -62,9 +62,7 @@ def create(outdir):
         stdf  = _N.std(x)   #  choice of 4 std devs to keep phase monotonically increasing
         x, y = createDataAR(100000, Ba, sig, sig)
         stda  = _N.std(x)   #  choice of 4 std devs to keep phase monotonically increasing
-        stNzs   = _N.empty((TR, 1))
         for tr in range(TR):
-            print("!!!!  %.2f" % lowQpc)
             if _N.random.rand() < lowQpc:
                 lowQs.append(tr)
                 csTR[tr] = 0
@@ -91,9 +89,9 @@ def create(outdir):
         if bGenOscUsingAR:
             #x, dN, prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, ARcoeff, psth + us[tr], stNzs[tr], lambda2=lambda2, p=1, nRhythms=nRhythms, cs=csTR[tr], etme=etme[tr])
             #  psth is None.  Turn it off for now
-            x, dN, prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, ARcoeff, us[tr], stNzs[tr], lambda2=lambda2, p=1, nRhythms=nRhythms, cs=csTR[tr], etme=etme[tr], offset=psth)
+            x, dN, latst[tr], prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, ARcoeffs, wgts, us[tr], lambda2=lambda2, p=1, nRhythms=nRhythms, cs=csTR[tr], etme=etme[tr], offset=psth)
+            AR_components[tr] = x
         else:
-            print("here 00000")
             xosc = createFlucOsc(f0, _N.array([f0VAR[tr]]), N, dt, 1, Bf=Bf, Ba=Ba, amp=amp, amp_nz=amp_nz, stdf=stdf, stda=stda, sig=sig, smoothKer=5, dSA=dSA, dSF=dSF) * etme[tr]  # sig is arbitrary, but we need to keep it same as when stdf, stda measured
             #x, dN, prbs, fs, prbsNOsc = createDataPPl2(TR, N, dt, None, psth + us[tr], None, lambda2=lambda2, p=1, nRhythms=1, cs=csTR[tr], etme=etme[tr], x=xosc[0])
             x, dN, latst[tr], prbsWithHist[tr], fs, prbsNOsc = createDataPPl2(TR, N, dt, None, us[tr], stNzs[tr], lambda2=lambda2, p=1, nRhythms=1, cs=csTR[tr], etme=etme[tr], x=xosc, offset=psth)
@@ -106,19 +104,19 @@ def create(outdir):
         probNOsc[:, tr] = prbsNOsc
         isis.extend(_U.toISI([_N.where(dN == 1)[0].tolist()])[0])
 
-    savesetMT(TR, spkdat, gtdat, model, lambda2, psth, outdir)
+    savesetMT(TR, spkdat, gtdat, model, lambda2, psth, outdir, AR_components=AR_components)
     #savesetMTnosc(TR, probNOsc, setname)
 
     arfs = ""
     xlst = []
 
-    if bGenOscUsingAR:
-        for nr in range(nRhythms):
-            arfs += "%.1fHz " % (500*ths[nr]/_N.pi)
-            xlst.append(x[nr])
-    else:
-        xlst.append(x[0])
-    sTitle = "AR2 freq %(fs)s    spk Hz %(spkf).1fHz   TR=%(tr)d   N=%(N)d" % {"spkf" : (_N.sum(spksPT) / (N*TR*0.001)), "tr" : TR, "N" : N, "fs" : arfs}
+    # if bGenOscUsingAR:
+    #     for nr in range(nRhythms):
+    #         arfs += "%.1fHz " % (500*ths[nr]/_N.pi)
+    #         xlst.append(x[nr])
+    # else:
+    #     xlst.append(x[0])
+    # sTitle = "AR2 freq %(fs)s    spk Hz %(spkf).1fHz   TR=%(tr)d   N=%(N)d" % {"spkf" : (_N.sum(spksPT) / (N*TR*0.001)), "tr" : TR, "N" : N, "fs" : arfs}
 
     #plotWFandSpks(N-1, dN, xlst, sTitle=sTitle, sFilename=resFN("generative", dir=setname))
 

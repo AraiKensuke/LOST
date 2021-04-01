@@ -44,8 +44,6 @@ def signal_handler(signal, frame):
 class mcmcARp(mcmcARspk.mcmcARspk):
     #  Description of model
     rn            = None    #  used for count data
-    k             = None
-    Cn            = None;    Cs            = None;    C             = None
     kntsPSTH      = None;    dfPSTH        = None
     use_prior     = _cd.__COMP_REF__
     AR2lims       = None
@@ -75,8 +73,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
     fSigMax       = 500.    #  fixed parameters
     #freq_lims     = [[1 / .85, fSigMax]]
     freq_lims     = [[.1, fSigMax]]
-    sig_ph0L      = -1
-    sig_ph0H      = 0
+    sig_ph0L      = -1.
+    sig_ph0H      = 0.
 
     #  1 offset for all trials
     bIndOffset    = True
@@ -87,6 +85,42 @@ class mcmcARp(mcmcARspk.mcmcARspk):
     ignr          = 0
 
     
+
+    def getComponents(self):
+        """
+        it0, it1 are gibbs iterations skipped, so should be like ITER//skp
+        """
+        oo = self
+        skpdITER = oo.wts.shape[0]
+        N  = oo.smpx.shape[1] - 2
+        _rts = _N.empty((skpdITER, oo.TR, N+1, oo.R, 1))    #  real components   N = ddN
+        _zts = _N.empty((skpdITER, oo.TR, N+1, oo.C, 1))    #  imag components 
+
+        for it in range(skpdITER):
+            if len(_N.where(_N.abs(oo.allalfas[it*oo.BsmpxSkp]) == 0)[0]) == 0:
+                b, c = dcmpcff(alfa=oo.allalfas[it*oo.BsmpxSkp])
+                for tr in range(oo.TR):
+                    for r in range(oo.R):
+                        _rts[it, tr, :, r] = b[r] * oo.uts[it, tr, r]
+
+                    for z in range(oo.C):
+                        #print "z   %d" % z
+                        cf1 = 2*c[2*z].real
+                        gam = oo.allalfas[it, oo.R+2*z]
+                        cf2 = 2*(c[2*z].real*gam.real + c[2*z].imag*gam.imag)
+                        _zts[it, tr, 0:N+1, z] = cf1*oo.wts[it, tr, z, 1:N+2] - cf2*oo.wts[it, tr, z, 0:N+1]
+
+        oo.rts = _N.array(_rts[:, :, 1:, :, 0])
+        oo.zts = _N.array(_zts[:, :, 1:, :, 0])
+
+        zts_stds = _N.mean(_N.std(oo.zts, axis=2), axis=1)  #  iter x C
+
+        srtd     = _N.argsort(zts_stds, axis=1)     #  ITER x C
+        for it in range(skpdITER):
+            oo.fs[it] = oo.fs[it, srtd[it, ::-1]]
+            oo.amps[it] = oo.amps[it, srtd[it, ::-1]]
+            for tr in range(oo.TR):
+                oo.zts[it, tr] = oo.zts[it, tr, :, srtd[it, ::-1]].T
 
     def gibbsSamp(self):  ###########################  GIBBSSAMPH
         global interrupted
@@ -180,6 +214,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
 
         HbfExpd = _N.zeros((oo.histknots, ooTR, oo.N+1))
 
+
         #HbfExpd = _N.zeros((oo.histknots, ooTR, oo.Hbf.shape[0]))
         #  HbfExpd is 11 x M x 1200
         #  find the mean.  For the HISTORY TERM
@@ -229,7 +264,9 @@ class mcmcARp(mcmcARspk.mcmcARspk):
             it = itrB*oo.peek
             if it > 0:
                 #  0.5*oo.fs  because (dt*2)  ->  1 corresponds to Fs/2
-                print("it: %(it)d    mnStd  %(mnstd).3f   fs  %(fs).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1], "fs" : ((0.5*oo.fs[it-1, 0]) / (oo.dt))})
+
+                print("---------it: %(it)d    mnStd  %(mnstd).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1]})
+                print(prt)
                 mnttt = _N.mean(ttts[0:it-1], axis=0)
                 for ti in range(9):
                     print("t%(2)d-t%(1)d  %(ttt).4f" % {"1" : ti+1, "2" : ti+2, "ttt" : mnttt[ti]})
@@ -238,6 +275,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 break
             for it in range(itrB*oo.peek, (itrB+1)*oo.peek):
                 ttt1 = _tm.time()
+
+                itstore = it // oo.BsmpxSkp
 
                 #  generate latent AR state
                 oo.f_x[:, 0]     = oo.x00
@@ -410,6 +449,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.gau_obs = kpOws - BaS - ARo - oous_rs - oo.knownSig
                     oo.gau_var =1 / oo.ws   #  time dependent noise
 
+                    #print(oo.Fs)
+                    #print(_N.linalg.inv(oo.Fs))
                     if cython_inv:
                         _kfar.armdl_FFBS_1itrMP(oo.gau_obs, oo.gau_var, oo.Fs, _N.linalg.inv(oo.Fs), oo.q2, oo.Ns, oo.ks, oo.f_x, oo.f_V, oo.chol_L_fV, oo.if_V, oo.p_x, oo.p_V, smpx_C_cont, K)
                     else:
@@ -426,25 +467,34 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                     oo.mnStds[it] = _N.mean(stds, axis=0)
 
                     ttt7 = _tm.time()
+                    #print("..................................")
+                    #print(alpR)
+                    #print(alpC)
 
+                    #print(alpR)
+                    #print(alpC)
 
                     # print(oo.smpx[0, 0:20, 0])
                     # print(oo.q2)
+
                     if cython_arc:
                         _N.copyto(smpx_contiguous1, 
                                   oo.smpx[:, 1+oo.ignr:])
                         _N.copyto(smpx_contiguous2, 
                                   oo.smpx[:, oo.ignr:, 0:ook-1])
-                        _arcfs.ARcfSmpl(ooN+1-oo.ignr, ook, oo.TR, oo.AR2lims, smpx_contiguous1, smpx_contiguous2, oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.sig_ph0L, oo.sig_ph0H)
+
+                        #ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, int R, int Cs, int Cn, complex[::1] valpR, complex[::1] valpC, double sig_ph0L, double sig_ph0H, double prR_s2)
+
+                        oo.uts[itstore], oo.wts[itstore] = _arcfs.ARcfSmpl(ooN+1-oo.ignr, ook, oo.TR, oo.AR2lims, smpx_contiguous1, smpx_contiguous2, oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.sig_ph0L, oo.sig_ph0H, 0.2*0.2)
                     else:
-                        _arcfs.ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
+                        oo.uts[itstore], oo.wts[itstore] = _arcfs.ARcfSmpl(ooN+1-oo.ignr, ook, oo.AR2lims, oo.smpx[:, 1+oo.ignr:, 0:ook], oo.smpx[:, oo.ignr:, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR, aro=oo.ARord, sig_ph0L=oo.sig_ph0L, sig_ph0H=oo.sig_ph0H)
                     #oo.F_alfa_rep = alpR + alpC   #  new constructed
                     oo.F_alfa_rep[0:oo.R] = alpR
                     oo.F_alfa_rep[oo.R:]  = alpC
-                    # print(alpR)
-                    # print(alpC)
-                            
+                    
                     prt, rank, f, amp = ampAngRep(oo.F_alfa_rep, oo.dt, f_order=True)
+                    #print(f)
+                    #print(amp)
                     ttt8 = _tm.time()
                         #print prt
                     #ut, wt = FilteredTimeseries(ooN+1, ook, oo.smpx[:, 1:, 0:ook], oo.smpx[:, :, 0:ook-1], oo.q2, oo.R, oo.Cs, oo.Cn, alpR, alpC, oo.TR)
@@ -531,8 +581,10 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 #if it - frms > oo.stationaryDuration:
                 #   break
 
+        oo.getComponents()
         oo.dump_smps(0, toiter=(it+1), dir=oo.mcmcRunDir)
-        oo.VIS = ARo   #  to examine this from outside
+        #oo.VIS = ARo   #  to examine this from outside
+
 
 
 
@@ -544,8 +596,15 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo     = self    #  call self oo.  takes up less room on line
         interrupted = False
 
-        oo.Cs          = len(oo.freq_lims)
         oo.C           = oo.Cn + oo.Cs
+        oo.Cn          = 0
+        oo.Cs          = oo.C
+
+        #oo.Cs          = len(oo.freq_lims)
+
+
+        # oo.Cn           = 0
+        # oo.Cs           = oo.C
         oo.k           = 2*oo.C + oo.R
 
         #  x0  --  Gaussian prior
@@ -554,6 +613,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.restarts = 0
 
         oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5, multiply_shape_hyperparam=multiply_shape_hyperparam, multiply_scale_hyperparam=multiply_scale_hyperparam, hist_timescale_ms=hist_timescale_ms, n_interior_knots=n_interior_knots)
+
         oo.setParams()
 
         t1    = _tm.time()

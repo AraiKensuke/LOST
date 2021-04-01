@@ -287,11 +287,10 @@ def createDataPP(N, B, beta, u, stNz, p=1, trim=0, x=None, absrefr=0):
 
     return x[trim:N], spks[trim:N], prbs[trim:N], fs[trim:N]
 
-def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2=None, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
+def createDataPPl2(TR, N, dt, B, wgts, u_psth, innovar=0.01, lambda2=None, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
     """
     B:  AR coefficeints
-    stNz   innovation variance.  stNz == 0.  flat state.
-    stNz == None   use x
+    wgts:  weight for each component   (will be summed)
     """
     beta = _N.array([1., 0.])
     #  a[1]^2 + 4a[0]
@@ -303,34 +302,38 @@ def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2=None, nRhythms=1, p=1, x=
         etme = _N.ones(N)
 
     buf  = 500
-    if (stNz is not None) and (_N.sum(stNz) == 0):
-        xc   = _N.zeros((nRhythms, N+buf))   #  components
-        x = _N.zeros(N+buf)
+    sqrtq2 = _N.sqrt(innovar)
+    #if (stNz is not None) and (_N.sum(stNz) == 0):
+    #xc   = _N.zeros((nRhythms, N+buf))   #  components
+    x = None#_N.zeros(N+buf)
+    #else:
+    if x is None:
+        xc   = _N.empty((nRhythms, N+buf))   #  components
+        for nr in range(nRhythms):
+            k = len(B[nr])
+            #sstNz = _N.sqrt(stNz[nr])
+
+            rands = _N.random.randn(N+buf)
+
+            #  B[k-1]*xc[i-k] + B[k-2]*xc[i-k+1] + ... B[0] * xc[i-1]
+            for i in range(k+1):
+                xc[nr, i] = sqrtq2*rands[i]
+            for i in range(k, N+buf):
+                #  for k = 2, x[i] = B[0]*x[i-2], B[1]*x[i - 1]
+                #  B[0]   is the weight of oldest time point
+                #  B[k-1] is weight of most recent time point
+                #        x[i] = _N.dot(B, x[i-k:i]) + err*_N.random.randn()
+                #xc[nr, i] = _N.dot(B[nr], xc[nr, i-1:i-k-1:-1]) + sstNz*rands[i]
+                xc[nr, i] = _N.dot(B[nr], xc[nr, i-k:i][::-1]) + sqrtq2*rands[i]
+            xc[nr] *= wgts[nr]
     else:
-        if x is None:
-            xc   = _N.empty((nRhythms, N+buf))   #  components
-            for nr in range(nRhythms):
-                k = len(B[nr])
-                sstNz = _N.sqrt(stNz[nr])
+        buf  = 0
+        xc   = x
 
-                rands = _N.random.randn(N+buf)
-
-                for i in range(k+1):
-                    xc[nr, i] = sstNz*rands[i]
-                for i in range(k+1, N+buf):
-                    #  for k = 2, x[i] = B[0]*x[i-2], B[1]*x[i - 1]
-                    #  B[0]   is the weight of oldest time point
-                    #  B[k-1] is weight of most recent time point
-                    #        x[i] = _N.dot(B, x[i-k:i]) + err*_N.random.randn()
-                    xc[nr, i] = _N.dot(B[nr], xc[nr, i-1:i-k-1:-1]) + sstNz*rands[i]
-        else:
-            buf  = 0
-            xc   = x
-
-        if nRhythms > 1:
-            x = _N.sum(xc, axis=0)     #  collapse
-        else:
-            x = xc.reshape(N+buf, )
+    if nRhythms > 1:
+        x = _N.sum(xc, axis=0)     #  collapse
+    else:
+        x = xc.reshape(N+buf, )
         
     spks = _N.zeros(N)
     prbs = _N.zeros(N)
@@ -352,6 +355,7 @@ def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2=None, nRhythms=1, p=1, x=
 
     for i in range(N):
         e = _N.exp(u_psth[i] + offset[i] + cs * etme[i] * x[i+buf]) * dt
+        #print(u_psth[i] + offset[i] + cs * etme[i] * x[i+buf])
         prbs[i] = (p*e) / (1 + e)
         e = _N.exp(u_psth[i]) * dt
         prbsNOsc[i]  = (p*e) / (1 + e)
@@ -359,6 +363,7 @@ def createDataPPl2(TR, N, dt, B, u_psth, stNz, lambda2=None, nRhythms=1, p=1, x=
         lmd = 1 if i - ht >= lh else lambda2[i - ht]
         
         prbsWithHist[i] = prbs[i] * lmd
+        prbsWithHist[i] = prbsWithHist[i] if prbsWithHist[i] < 1 else 1
         
         prbsNOsc[i] *= lmd
         spks[i] = _N.random.binomial(1, prbsWithHist[i])
@@ -552,7 +557,7 @@ def saveset(name, noparam=False):
         fp.write("absrefr=%d\n" % absrefr)
         fp.close()
 
-def savesetMT(TR, spkdat, gtdat, model, lambda2, psth, outdir):
+def savesetMT(TR, spkdat, gtdat, model, lambda2, psth, outdir, AR_components=None):
     #  u, B, singleFreqAR, dt, stNz, x, dN, prbs
     fmt = ""
     fmtgt = ""
@@ -569,6 +574,8 @@ def savesetMT(TR, spkdat, gtdat, model, lambda2, psth, outdir):
     pcklme["spkdat"]      = spkdat
     pcklme["psth"]        = psth
     pcklme["lambda2"]     = lambda2
+    if AR_components is not None:
+        pcklme["AR_components"]     = AR_components
     dmp = open("%(od)s/generative.pkl" % {"od" : outdir}, "wb")
     pickle.dump(pcklme, dmp, -1)
     dmp.close()
