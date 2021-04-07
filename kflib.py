@@ -1,4 +1,4 @@
-from LOSTdirs import resFN
+from LOST.LOSTdirs import resFN
 import numpy as _N
 from LOST.ARcfSmplFuncs import ampAngRep, dcmpcff#betterProposal
 import matplotlib.pyplot as _plt
