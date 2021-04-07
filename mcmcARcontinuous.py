@@ -74,7 +74,7 @@ class mcmcARcontinuous:
                 for z in range(oo.C):
                     #print "z   %d" % z
                     cf1 = 2*c[2*z].real
-                    gam = oo.allalfas[it, oo.R+2*z]
+                    gam = oo.allalfas[it*oo.skp, oo.R+2*z]
                     cf2 = 2*(c[2*z].real*gam.real + c[2*z].imag*gam.imag)
                     _zts[it, tr, 0:N+1, z] = cf1*oo.wts[it, tr, z, 1:N+2] - cf2*oo.wts[it, tr, z, 0:N+1]
 
@@ -219,7 +219,7 @@ class mcmcARcontinuous:
 
             F_alfa_rep[0:oo.R] = alpR
             F_alfa_rep[oo.R:]  = alpC
-            oo.allalfas[itstore] = F_alfa_rep
+            oo.allalfas[it] = F_alfa_rep
             #F_alfa_rep = alpR + alpC   #  new constructed
             prt, rank, f, amp = ampAngRep(F_alfa_rep, oo.dt, f_order=True)
 
