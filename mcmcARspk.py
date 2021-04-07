@@ -31,6 +31,8 @@ class mcmcARspk(mAR.mcmcAR):
     F_alfa_rep    = None
     pkldalfas     = None
 
+    smpls_fn_incl_trls = None
+
     noAR          = False    #  no oscillation
     #  Sampled 
     smp_u         = None;    smp_aS        = None
@@ -70,6 +72,7 @@ class mcmcARspk(mAR.mcmcAR):
     lrn_scld           = None   #  scratch space
     mean_isi_1st2spks  = None   #  mean isis for all trials of 1st 2 spikes
     maxISI             = None
+    psthknts           = 4
 
     #  Gibbs
     ARord         = _cd.__NF__
@@ -92,12 +95,6 @@ class mcmcARspk(mAR.mcmcAR):
     knownSig        = None
     xknownSig       = 1   #  multiply knownSig by...
 
-    h0_1      = None        # silence following spike
-    h0_2      = None        # inhibitory rebound peak
-    h0_3      = None        # decayed away peaky part 
-    h0_4      = None        # far
-    h0_5      = None        # farther
-
     hS        = None
 
     dohist    = True
@@ -111,7 +108,7 @@ class mcmcARspk(mAR.mcmcAR):
         # if (self.noAR is not None) or (self.noAR == False):
         #     self.lfc         = _lfc.logerfc()
 
-    def loadDat(self, runDir, datfilename, trials, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70, n_interior_knots=8): #################  loadDat
+    def loadDat(self, runDir, datfilename, trials, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70, n_interior_knots=8): #################  loadDat
         oo = self
         hist_timescale = hist_timescale_ms*0.001
         bGetFP = False
@@ -152,7 +149,7 @@ class mcmcARspk(mAR.mcmcAR):
         for utrl in trials:
             try:
                 ki = kpTrl.index(utrl)
-                if _N.sum(y[utrl, :]) > 0:
+                if _N.sum(y[utrl, :]) > 1:   #  must see at least 2 spikes
                     oo.useTrials.append(ki)
             except ValueError:
                 print("a trial requested to use will be removed %d" % utrl)
@@ -336,7 +333,7 @@ class mcmcARspk(mAR.mcmcAR):
 
         oo.mnStds       = _N.empty(iters)
 
-    def setParams(self):
+    def setParams(self, psth_run=False, psth_knts=10):
         oo = self
         # #generate initial values of parameters
         #oo._d = _kfardat.KFARGauObsDat(oo.TR, oo.N, oo.k)
@@ -413,8 +410,6 @@ class mcmcARspk(mAR.mcmcAR):
         oo.q2          /= mlt*mlt
         xE, nul = createDataAR(oo.N, oo.F0, oo.q2[0], 0.1)
 
-
-
         w  =  5
         wf =  gauKer(w)
         gk = _N.empty((oo.TR, oo.N+1))
@@ -438,16 +433,15 @@ class mcmcARspk(mAR.mcmcAR):
                 oo.smpx[m, n, oo.k-1] = _N.dot(oo.F0, oo.smpx[m, n:n+oo.k, oo.k-2]) # no noise
 
         if oo.bpsth:
-            psthKnts, apsth, aWeights = _spknts.suggestPSTHKnots(oo.dt, oo.TR, oo.N+1, oo.y.T, iknts=4)
+            psthKnts, apsth, aWeights = _spknts.suggestPSTHKnots(oo.dt, oo.TR, oo.N+1, oo.y.T, psth_knts=psth_knts, psth_run=psth_run)
+
             _N.savetxt("apsth.txt", apsth, fmt="%.4f")
             _N.savetxt("psthKnts.txt", psthKnts, fmt="%.4f")
-
+                
             apprx_ps = _N.array(_N.abs(aWeights))
             oo.u_a   = -_N.log(1/apprx_ps - 1)
 
             #  For oo.u_a, use the values we get from aWeights 
-
-            print(psthKnts)
 
             oo.B = patsy.bs(_N.linspace(0, (oo.t1 - oo.t0)*oo.dt, (oo.t1-oo.t0)), knots=(psthKnts*oo.dt), include_intercept=True)    #  spline basis
 
@@ -470,8 +464,6 @@ class mcmcARspk(mAR.mcmcAR):
         #  this has no direct bearing on sampling of history knots
         #  however, 
         oo = self
-        # print("ARo.shape?????????")
-        # print(ARo.shape)
         # print("N+1   %d" % (oo.N+1))
         for m in range(oo.TR):
             sts = stsM[m]
@@ -484,7 +476,16 @@ class mcmcARspk(mAR.mcmcAR):
             t1= sts[len(sts)-1]   #  if len(sts) == 1, didn't do for loop
             
             #ARo[m, t1+1:] = hcrv[1:T]#hcrv[0:T-1]
-            ARo[m, t1+1:] = hcrv[0:T-1]#hcrv[1:T]#
+            #print(".............")
+            #print("m   %(m)d   t1=%(t1)d   T=%(T)d    len(hcrv)=%(lh)d" % {"m" : m, "t1" : t1, "T" : T, "lh" : len(hcrv)})
+            #print(sts)
+            #print("left %(l)d   right %(r)d" % {"l" : len(ARo[m, t1+1:]), "r" : len(hcrv[0:T-1])})
+            #  will fail if hcrv is too short, ie T is > len(hcrv)
+            if hcrv.shape[0] > T - 1:
+                ARo[m, t1+1:] = hcrv[0:T-1]#hcrv[1:T]#
+            else:
+                ARo[m, t1+1:t1+hcrv.shape[0]+1] = hcrv[0:T-1]#hcrv[1:T]#
+                ARo[m, t1+hcrv.shape[0]+1:] = hcrv[-1]#hcrv[1:T]#
             isiHiddenPrt = oo.t0_is_t_since_1st_spk[m] + 1
 
             ARo[m, 0:sts[0]+1] = hcrv[isiHiddenPrt:isiHiddenPrt + sts[0]+1]
@@ -597,7 +598,7 @@ class mcmcARspk(mAR.mcmcAR):
         dmp.close()
 
     
-    def dump_smps(self, frm, pcklme=None, dir=None, toiter=None):
+    def dump_smps(self, frm, pcklme=None, dir=None, toiter=None, smpls_fn_incl_trls=False):
         oo    = self
         if pcklme is None:
             pcklme = {}
@@ -639,13 +640,16 @@ class mcmcARspk(mAR.mcmcAR):
 
         print("saving state in %s" % oo.outSmplFN)
         if dir is None:
-            dmp = open(oo.outSmplFN, "wb")
+            if smpls_fn_incl_trls is None:
+                dmp = open(oo.outSmplFN, "wb")
+            else:
+                dmp = open("%(bf)s_%(tr0)d_%(tr1)d" % {"bf" : oo.outSmplFN, "tr0" : int(_N.min(oo.useTrials)), "tr1" : int(_N.max(oo.useTrials))}, "wb")
         else:
-            dmp = open("%(d)s/%(sfn)s" % {"d" : dir, "sfn" : oo.outSmplFN}, "wb")
+            if smpls_fn_incl_trls is None:
+                dmp = open("%(d)s/%(sfn)s" % {"d" : dir, "sfn" : oo.outSmplFN}, "wb")
+            else:
+                dmp = open("%(d)s/%(bf)s_%(tr0)d_%(tr1)d" % {"d" : dir, "bf" : oo.outSmplFN, "tr0" : int(_N.min(oo.useTrials)), "tr1" : int(_N.max(oo.useTrials))}, "wb")
+
         pickle.dump(pcklme, dmp, -1)
         dmp.close()
 
-        # import pickle
-        # with open("smpls.dump", "rb") as f:
-        # lm = pickle.load(f)
-        

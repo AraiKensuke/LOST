@@ -4,6 +4,7 @@ import patsy
 import ka_tools.utilities as _U
 import matplotlib.pyplot as _plt
 from LOST.utildirs import setFN
+from filter import gauKer
 
 v = 5
 c = 5
@@ -132,7 +133,7 @@ def genKnts(tscl, xMax):
 #     return bstKnts, lmd2, nhaz, tscl
 
 
-def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
+def suggestPSTHKnots(dt, TR, N, bindat, bnsz=10, psth_knts=10, psth_run=False):
     """
     bnsz   binsize used to calculate approximate PSTH
     """
@@ -157,56 +158,74 @@ def suggestPSTHKnots(dt, TR, N, bindat, bnsz=50, iknts=2):
         apsth = _apsth
 
     apsth *= dt
+    gk = gauKer(5) 
+    gk /= _N.sum(gk)
+    f_apsth = _N.convolve(apsth, gk, mode="same")
+    dpsth_pctl = _N.cumsum(_N.abs(_N.diff(f_apsth)))
+    dpsth_pctl /= dpsth_pctl[-1]
+    dpsth_pctl[0] = 0
 
-    ITERS = 1000
+    ITERS = 40
     x     = _N.linspace(0., N-1, N, endpoint=False)  # in units of ms.
     r2s   = _N.empty(ITERS)
-    allKnts = _N.empty((ITERS, iknts))
-    allCoeffs  = []
+    best_r2s = _N.zeros(5)
 
-    tAvg  = 1./iknts
-    tsMin = tAvg*0.5
-    tsMax = tAvg*1.5
+    for iknts in range(5, 6):
+        allKnts = _N.empty((ITERS, iknts))
+        allCoeffs  = []
 
-    for it in range(ITERS):
-        bGood = False
-        while not bGood:
-            try:
+        tAvg  = 1./iknts
+        tsMin = tAvg*0.5
+        tsMax = tAvg*1.5
 
-                pieces  = tsMin + _N.random.rand(iknts+1)*(tsMax-tsMin)
+        for it in range(ITERS):
+            knt_inds = _N.zeros(iknts+1)
+            bGood = False
+            while not bGood:
+                try:
+                    #pieces  = tsMin + _N.random.rand(iknts+1)*(tsMax-tsMin)
+                    rnd_pctls   = _N.sort(_N.random.rand(iknts+1))
 
-                knts    = _N.empty(iknts+1)
+                    #pieces  = tsMin + _N.random.rand(iknts+1)*(tsMax-tsMin)
+                    for i in range(iknts+1):
+                        iHere = _N.where((rnd_pctls[i] >= dpsth_pctl[0:-1]) & (rnd_pctls[i] < dpsth_pctl[1:]))[0]
+                        knt_inds[i] = iHere[0]
 
-                knts[0] = pieces[0]
-                for i in range(1, iknts+1):
-                    knts[i] = knts[i-1] + pieces[i]
-                knts /= knts[-1]
-                knts[0:-1] *= N
-                #knts  = _N.sort((0.1 + 0.85*_N.random.rand(iknts))*N)
-                B     = patsy.bs(x, knots=(knts[0:-1]), include_intercept=True)
-                iBTB   = _N.linalg.inv(_N.dot(B.T, B))
-                bGood  = True
-            except _N.linalg.linalg.LinAlgError:
-                print("Linalg Error or Value Error in suggestPSTHKnots")
-            except ValueError:
-                print("Linalg Error or Value Error in suggestPSTHKnots")
+                    # knts    = _N.empty(iknts+1)
+
+                    # knts[0] = pieces[0]
+                    # for i in range(1, iknts+1):
+                    #     knts[i] = knts[i-1] + pieces[i]
+                    # knts /= knts[-1]
+                    # knts[0:-1] *= N
+                    #knts  = _N.sort((0.1 + 0.85*_N.random.rand(iknts))*N)
+                    B     = patsy.bs(x, knots=(knt_inds[0:-1]), include_intercept=True)
+                    iBTB   = _N.linalg.inv(_N.dot(B.T, B))
+                    bGood  = True
+                except _N.linalg.linalg.LinAlgError:
+                    print("Linalg Error or Value Error in suggestPSTHKnots")
+                except ValueError:
+                    print("Linalg Error or Value Error in suggestPSTHKnots")
 
 
-        #a     = _N.dot(iBTB, _N.dot(B.T, _N.log(apsth)))
-        a     = _N.dot(iBTB, _N.dot(B.T, apsth))
-        #ft    = _N.exp(_N.dot(B, a))
-        ft    = _N.dot(B, a)
-        r2s[it] = _N.dot(ft - apsth, ft - apsth)
-        allKnts[it, :] = knts[0:-1]
-        allCoeffs.append(a)
+            #a     = _N.dot(iBTB, _N.dot(B.T, _N.log(apsth)))
+            a     = _N.dot(iBTB, _N.dot(B.T, apsth))
+            #ft    = _N.exp(_N.dot(B, a))
+            ft    = _N.dot(B, a)
+            r2s[it] = _N.dot(ft - apsth, ft - apsth)
+            allKnts[it, :] = knt_inds[0:-1]
+            allCoeffs.append(a)
 
-    mnIt = _N.where(r2s == r2s.min())[0][0]
+        mnIt = _N.where(r2s == r2s.min())[0][0]
+        best_r2s[iknts-10] = r2s[mnIt]
     knts = allKnts[mnIt]
     cfs  = allCoeffs[mnIt]
     B     = patsy.bs(x, knots=knts, include_intercept=True)
-    #fig = _plt.figure()
-    #_plt.plot(_N.dot(B, cfs))
-    #_plt.plot(apsth)
+
+    if psth_run:
+        fig = _plt.figure()
+        _plt.plot(_N.dot(B, cfs))
+        _plt.plot(apsth)
 
     return knts, apsth, cfs
 

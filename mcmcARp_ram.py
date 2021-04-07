@@ -125,7 +125,7 @@ class mcmcARp(mcmcARspk.mcmcARspk):
             for tr in range(oo.TR):
                 oo.zts[it, tr] = oo.zts[it, tr, :, srtd[it, ::-1]].T
 
-    def gibbsSamp(self):  ###########################  GIBBSSAMPH
+    def gibbsSamp(self, smpls_fn_incl_trls=False):  ###########################  GIBBSSAMPH
         global interrupted
         oo          = self
 
@@ -269,7 +269,8 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 #  0.5*oo.fs  because (dt*2)  ->  1 corresponds to Fs/2
 
                 print("---------it: %(it)d    mnStd  %(mnstd).3f" % {"it" : itrB*oo.peek, "mnstd" : oo.mnStds[it-1]})
-                print(prt)
+                if not oo.noAR:
+                    print(prt)
                 mnttt = _N.mean(ttts[0:it-1], axis=0)
                 for ti in range(9):
                     print("t%(2)d-t%(1)d  %(ttt).4f" % {"1" : ti+1, "2" : ti+2, "ttt" : mnttt[ti]})
@@ -585,13 +586,13 @@ class mcmcARp(mcmcARspk.mcmcARspk):
                 #   break
 
         oo.getComponents()
-        oo.dump_smps(0, toiter=(it+1), dir=oo.mcmcRunDir)
+        oo.dump_smps(0, toiter=(it+1), dir=oo.mcmcRunDir, smpls_fn_incl_trls=smpls_fn_incl_trls)
         #oo.VIS = ARo   #  to examine this from outside
 
 
 
 
-    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, runlatent=False, dontrun=False, h0_1=None, h0_2=None, h0_3=None, h0_4=None, h0_5=None, readSmpls=False, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70, n_interior_knots=8): ###########  RUN
+    def run(self, datfilename, runDir, trials=None, minSpkCnt=0, pckl=None, readSmpls=False, multiply_shape_hyperparam=1, multiply_scale_hyperparam=1, hist_timescale_ms=70, n_interior_knots=8, smpls_fn_incl_trls=False, psth_run=False, psth_knts=10): ###########  RUN
         """
         hist_timescale_ms  rough timescale of the post-spike history, counted from 10th percentile ISI
         """
@@ -615,13 +616,12 @@ class mcmcARp(mcmcARspk.mcmcARspk):
         oo.s2_x00       = _arl.dcyCovMat(oo.k, _N.ones(oo.k), 0.4)
         oo.restarts = 0
 
-        oo.loadDat(runDir, datfilename, trials, h0_1=h0_1, h0_2=h0_2, h0_3=h0_3, h0_4=h0_4, h0_5=h0_5, multiply_shape_hyperparam=multiply_shape_hyperparam, multiply_scale_hyperparam=multiply_scale_hyperparam, hist_timescale_ms=hist_timescale_ms, n_interior_knots=n_interior_knots)
+        oo.loadDat(runDir, datfilename, trials, multiply_shape_hyperparam=multiply_shape_hyperparam, multiply_scale_hyperparam=multiply_scale_hyperparam, hist_timescale_ms=hist_timescale_ms, n_interior_knots=n_interior_knots)
 
-        oo.setParams()
+        oo.setParams(psth_run=psth_run, psth_knts=psth_knts)
 
-        t1    = _tm.time()
-
-        oo.gibbsSamp()
-        t2    = _tm.time()
-        print(t2-t1)
-        print("done")
+        if not psth_run:
+            t1    = _tm.time()
+            oo.gibbsSamp(smpls_fn_incl_trls=smpls_fn_incl_trls)
+            t2    = _tm.time()
+            print("time:  %.3f" % (t2-t1))
