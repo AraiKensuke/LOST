@@ -33,7 +33,7 @@ def modhistAll(setname, shftPhase=0, fltPrms=[3.3, 11, 1, 15], t0=None, t1=None,
     if m == None:
         bRealDat, COLS, sub = False, 3, 1
 
-    print "realDat is %s" % str(bRealDat)
+    print("realDat is %s" % str(bRealDat))
 
     TR   = cols / COLS
     tr1 = TR if (tr1 is None) else tr1
@@ -71,7 +71,7 @@ def modhistAll(setname, shftPhase=0, fltPrms=[3.3, 11, 1, 15], t0=None, t1=None,
             return phs
         else:
             fl = []
-            for i in xrange(len(phs)):
+            for i in range(len(phs)):
                 fl.extend(phs[i])
             return fl
     return figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, surrogates=surrogates, normed=normed, fn=fn, maxY=maxY, yticks=yticks, setname=setname, color=color, xlabel=xlabel, smFnt=smFnt, bgFnt=bgFnt)
@@ -90,7 +90,7 @@ def _histPhase0_phaseInfrdAll(TR, N, x, _mdn, t0=None, t1=None, bRealDat=False, 
 
     if (fltPrms is not None) and (not bRealDat):
         _fx = _N.empty((TR, N))
-        for tr in xrange(TR):
+        for tr in range(TR):
             if len(fltPrms) == 2:
                 _fx[tr] = lpFilt(fltPrms[0], fltPrms[1], 500, x[tr])
             elif len(fltPrms) == 4: 
@@ -99,8 +99,8 @@ def _histPhase0_phaseInfrdAll(TR, N, x, _mdn, t0=None, t1=None, bRealDat=False, 
     else:
         _fx  = x
 
-    gk  = gauKer(1) 
-    gk /= _N.sum(gk)
+    #gk  = gauKer(1) 
+    #gk /= _N.sum(gk)
 
     if trials is None:
         trials = _N.arange(TR)
@@ -130,7 +130,8 @@ def _histPhase0_phaseInfrdAll(TR, N, x, _mdn, t0=None, t1=None, bRealDat=False, 
 
     for tr in trials:
         itr += 1
-        cv = _N.convolve(mdn[tr, t0:t1] - _N.mean(mdn[tr, t0:t1]), gk, mode="same")
+        #cv = _N.convolve(mdn[tr, t0:t1] - _N.mean(mdn[tr, t0:t1]), gk, mode="same")
+        cv = mdn[tr, t0:t1] - _N.mean(mdn[tr, t0:t1])
 
         ht_mdn  = _ssig.hilbert(cv)
         ht_fx   = _ssig.hilbert(fx[tr, t0:t1] - _N.mean(fx[tr, t0:t1]))
@@ -149,7 +150,7 @@ def _histPhase0_phaseInfrdAll(TR, N, x, _mdn, t0=None, t1=None, bRealDat=False, 
         #    if (ph_mdn[i] < 1) and (ph_mdn[i] > 0.5) and (ph_mdn[i+1] < -0.5):
         #        pInfrdAt0.append(ph_fx[i]/2.)
 
-    return figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, surrogates=surrogates, normed=normed, fn=fn, maxY=maxY, yticks=yticks, color=color, xlabel=xlabel)
+    return figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, surrogates=surrogates, normed=normed, fn=fn, maxY=maxY, yticks=yticks, color=color, xlabel=None)
 
 def getPhases(_mdn, offset=0):
     """
@@ -158,16 +159,17 @@ def getPhases(_mdn, offset=0):
     TR = _mdn.shape[0]
     ph = _N.array(_mdn)
 
-    gk  = gauKer(2) 
+    gk  = gauKer(1) 
     gk /= _N.sum(gk)
 
 
     mdn = _mdn
     itr   = 0
 
-    for tr in xrange(TR):
+    for tr in range(TR):
         itr += 1
-        cv = _N.convolve(mdn[tr] - _N.mean(mdn[tr]), gk, mode="same")
+        #cv = _N.convolve(mdn[tr] - _N.mean(mdn[tr]), gk, mode="same")
+        cv = mdn[tr] - _N.mean(mdn[tr])
 
         ht_mdn  = _ssig.hilbert(cv)
         ph[tr]  = (_N.arctan2(ht_mdn.imag, ht_mdn.real) + _N.pi) / (2*_N.pi)
@@ -182,7 +184,7 @@ def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surroga
     ltr = len(trials)
     inorderTrials = _N.arange(ltr)   #  original trial IDs no lnger necessary
     R2s = _N.empty(surrogates)
-    for srgt in xrange(surrogates):
+    for srgt in range(surrogates):
         if srgt == 0:
             trls = inorderTrials
         else:
@@ -207,7 +209,8 @@ def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surroga
         ec = mC.hist1
     else:
         ec = color
-    _plt.hist(vPhs.tolist() + (vPhs + 1).tolist(), bins=_N.linspace(0, 2, 51), color=ec, edgecolor=ec, normed=normed)
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    _plt.hist(vPhs.tolist() + (vPhs + 1).tolist(), bins=_N.linspace(0, 2, 51), color=ec, edgecolor=ec, density=normed)
 
     if maxY is not None:
         _plt.ylim(0, maxY)
@@ -243,7 +246,7 @@ def figCircularDistribution(phs, cSpkPhs, sSpkPhs, trials, setname=None, surroga
         _plt.savefig(resFN(fn, dir=setname), transparent=True)
     else:
         _plt.savefig(fn, transparent=True)
-    _plt.close()
+    #_plt.close()
     return R2s
 
 def oscPer(setname, fltPrms=[5, 13, 1, 20], t0=None, t1=None, tr0=0, tr1=None, trials=None, fn=None, showHist=True, osc=None):
@@ -312,4 +315,4 @@ def oscPer(setname, fltPrms=[5, 13, 1, 20], t0=None, t1=None, tr0=0, tr1=None, t
         _plt.hist(Ts, bins=range(min(Ts) - 1, max(Ts)+1))
     mn = _N.mean(Ts)
     std= _N.std(Ts)
-    print "mean Hz %(f).3f    cv: %(cv).3f" % {"cv" : (std/mn), "f" : (1000/mn)}
+    print("mean Hz %(f).3f    cv: %(cv).3f" % {"cv" : (std/mn), "f" : (1000/mn)})

@@ -1,7 +1,7 @@
 #
-from LOST.mcmcARpFuncs import loadL2, runNotes, loadKnown, loadKnownU
+from LOST.mcmcARpFuncs import loadL2, runNotes, loadKnown
 from filter import bpFilt, lpFilt, gauKer
-import LOST.mcmcAR as mAR
+import LOST.mcmcAR_ap as mAR
 import LOST.ARlib as _arl
 import pyPG as lw
 #import logerfc as _lfc
@@ -19,7 +19,7 @@ import pickle
 import matplotlib.pyplot as _plt
 
 
-class mcmcARspk(mAR.mcmcAR):
+class mcmcARspk_ap(mAR.mcmcAR_ap):
     ##  
     psthBurns     = 5
     k             = None
@@ -36,10 +36,13 @@ class mcmcARspk(mAR.mcmcAR):
     noAR          = False    #  no oscillation
     #  Sampled 
     smp_u         = None;    smp_aS        = None
-    allalfas      = None
-    uts           = None;    wts           = None
-    rts           = None;    zts           = None
-    zts0          = None     #  the lowest component only
+    allalfasA      = None
+    allalfasP      = None
+    utsA           = None;    wtsA           = None
+    rtsA           = None;    ztsA           = None
+    utsP           = None;    wtsP           = None
+    rtsP           = None;    ztsP           = None
+
     ranks         = None
     pgs           = None
     fs            = None
@@ -47,8 +50,10 @@ class mcmcARspk(mAR.mcmcAR):
     mnStds        = None
 
     #  Existing data, ground truth
-    fx            = None   #  filtered latent state
-    px            = None   #  phase of latent state
+    fxA            = None   #  filtered latent state
+    pxA            = None   #  phase of latent state
+    fxP            = None   #  filtered latent state
+    pxP            = None   #  phase of latent state
 
     histknots     = 10     #  histknots == 9 if p(isi) == max at isi = 1
     #histknots     = 11
@@ -92,9 +97,7 @@ class mcmcARspk(mAR.mcmcAR):
 
     #  knownSig
     knownSigFN      = None
-    knownUFN       = None
     knownSig        = None
-    knownU          = None
     xknownSig       = 1   #  multiply knownSig by...
 
     hS        = None
@@ -194,7 +197,6 @@ class mcmcARspk(mAR.mcmcAR):
             #oo.a_q2 = num_dat_pts // 10
             oo.a_q2 = (num_dat_pts // 10) * multiply_shape_hyperparam
             #md = B / (a+1)   B = md
-            #oo.B_q2 = (1e-4 * (oo.a_q2 + 1) * evry) * multiply_scale_hyperparam
             oo.B_q2 = (1e-4 * (oo.a_q2 + 1) * evry) * multiply_scale_hyperparam
             print("setting prior for innovation %(a)d  %(B).3e" % {"a" : oo.a_q2, "B" : oo.B_q2})
 
@@ -279,23 +281,11 @@ class mcmcARspk(mAR.mcmcAR):
         oo.loghist = loadL2(runDir, fn=oo.histFN)
         oo.dohist = True if oo.loghist is None else False
 
-        if oo.knownSig is None:
-            oo.knownSig = _N.zeros((oo.TR, oo.N+1))
-        if oo.knownU is None:
-            oo.knownU = _N.zeros((oo.TR, 1))
-
         oo.knownSig = loadKnown(runDir, trials=oo.useTrials, fn=oo.knownSigFN) 
-        oo.knownU[:, 0]   = loadKnownU(runDir, trials=oo.useTrials, fn=oo.knownUFN) 
         if oo.knownSig is None:
             oo.knownSig = _N.zeros((oo.TR, oo.N+1))
         else:
             oo.knownSig *= oo.xknownSig
-            print("before adding knownU  ")
-            print(oo.knownSig)
-
-            oo.knownSig += oo.knownU
-            print("after adding knownU  ")
-            print(oo.knownSig)
 
         ###  override knot locations
 
@@ -424,9 +414,7 @@ class mcmcARspk(mAR.mcmcAR):
         ########  Limit the amplitude to something reasonable
         xE, nul = createDataAR(oo.N, oo.F0, oo.q20, 0.1)
         mlt  = _N.std(xE) / 0.5    #  we want amplitude around 0.5
-        #oo.q2          /= mlt*mlt
-        #oo.q2 =
-        #print("oo.q2    %.2e" % oo.q2[0])
+        oo.q2          /= mlt*mlt
         xE, nul = createDataAR(oo.N, oo.F0, oo.q2[0], 0.1)
 
         w  =  5
@@ -627,8 +615,6 @@ class mcmcARspk(mAR.mcmcAR):
             pcklme["aS"]   = oo.smp_aS[0:toiter:oo.BsmpxSkp]  #  this is last
         pcklme["frm"]    = frm
         pcklme["evry"]    = oo.evry
-        pcklme["y"]       = oo.y
-        pcklme["dt"]    = oo.dt
         pcklme["B"]    = oo.B
         pcklme["R"]    = oo.R
         pcklme["C"]    = oo.C

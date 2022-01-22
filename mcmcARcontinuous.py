@@ -215,7 +215,7 @@ class mcmcARcontinuous:
             if ram:
                 oo.uts[itstore], oo.wts[itstore] = _arcfs.ARcfSmpl(N+1, oo.k, oo.TR, AR2lims, smpx_contiguous1, smpx_contiguous2, q2, oo.R, 0, oo.C, alpR, alpC, sig_ph0L, sig_ph0H, 0.2*0.2)
             else:
-                oo.uts[itstore], oo.wts[itstore] = _arcfs.ARcfSmpl(N, oo.k, AR2lims, oo.smpx[:, 1:, 0:oo.k], oo.smpx[:, :, 0:oo.k-1], q2, oo.R, oo.C, 0, alpR, alpC, oo.TR, aro=ARord, sig_ph0L=sig_ph0L, sig_ph0H=sig_ph0H)
+                oo.uts[itstore], oo.wts[itstore] = _arcfs.ARcfSmpl(N, oo.k, AR2lims, oo.smpx[:, 1:, 0:oo.k], oo.smpx[:, :, 0:oo.k-1], q2, oo.R, oo.C, 0, alpR, alpC, oo.TR, aro=oo.ARord, sig_ph0L=sig_ph0L, sig_ph0H=sig_ph0H)
 
             F_alfa_rep[0:oo.R] = alpR
             F_alfa_rep[oo.R:]  = alpC

@@ -8,7 +8,7 @@ from distutils.extension import Extension
 from Cython.Distutils import build_ext   # Extension for a c-file, build_ext for cython file
 
 #modules = ["kfARlibMPmv_ram2", "kfARlib1c", "kdist", "ARcfSmplNoMCMC_ram"]
-modules = ["kfARlibMPmv_ram2", "kfARlibMPmv_ram3", "kfARlibMPmv_ram5", "kdist", "ARcfSmplNoMCMC_ram", "inv_cov"]
+modules = ["kfARlibMPmv_ram2", "kfARlibMPmv_ram3", "kfARlibMPmv_ram5", "kfARlibMPmv_ram5cp", "kdist", "ARcfSmplNoMCMC_ram", "ARcfSmplNoMCMC_ramcp", "inv_cov"]
 #modules = ["inv_cov"]
 
 ###  import LogitWrapper 

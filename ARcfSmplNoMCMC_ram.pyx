@@ -66,10 +66,15 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
 
     ujs     = _N.zeros((TR, R, N + 1, 1))
     wjs     = _N.zeros((TR, C, N + 2, 1))
-    cdef double[:, :, :, ::1] v_ujs = ujs
-    p_ujs = &v_ujs[0, 0, 0, 0]
-    cdef double[:, :, :, ::1] v_wjs = wjs
-    p_wjs = &v_wjs[0, 0, 0, 0]
+    cdef double[:, :, :, ::1] v_ujs
+    cdef double[:, :, :, ::1] v_wjs
+
+    if R > 0:
+        v_ujs = ujs
+        p_ujs = &v_ujs[0, 0, 0, 0]
+    if C > 0:
+        v_wjs = wjs
+        p_wjs = &v_wjs[0, 0, 0, 0]
 
     Ff  = _N.zeros((1, k-1))
     F0  = _N.zeros(2)
@@ -113,8 +118,9 @@ def init(int N, int k, int TR, int R, int Cs, int Cn, aro=_cd.__NF__):
     cdef double[::1] vmj = mj
     p_mj = &vmj[0]
 
-    filtrootsC = _N.zeros(2*C-2+R, dtype=_N.complex)
+    filtrootsC = _N.zeros(2*C-2+R, dtype=_N.complex) + 0.1 + 0.1j
     filtrootsR = _N.zeros(2*C+R-1, dtype=_N.complex)
+    
     cdef complex[::1] vfiltrootsC = filtrootsC
     p_vfiltrootsC = &vfiltrootsC[0]
     cdef complex[::1] vfiltrootsR = filtrootsR
@@ -320,6 +326,7 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
 
         #iH     = _N.zeros((TR, 2, 2))
         #_N.copyto(Ji, _N.sum(iH, axis=0))
+        #print("pJi0, pJi1, pJi2   %(0).3f  %(1).3f  %(2).3f     iq2  %(iq2).3f" % {"0" : p_Ji[0], "1" : p_Ji[1], "2" : p_Ji[2], "iq2" : iq2})
         idiv = 1./(p_Ji[0]*p_Ji[3]-p_Ji[1]*p_Ji[2])
         p_J[0] = p_Ji[3] * idiv
         p_J[3] = p_Ji[0] * idiv
@@ -352,6 +359,10 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
         svPr2  = sqrt(vPr2)
         svPr1  = sqrt(vPr1)
 
+        #  When C > 8, we get 
+        #  mu1prp is nan
+        #  svPr1, svPr2 is nan, idiv is nan
+
         #b2Real = (U[1, 0] + 0.25*U[0, 0]*U[0, 0] > 0)
         ######  Initialize F0
 
@@ -360,7 +371,7 @@ def ARcfSmpl(int N, int k, int TR, AR2lims_nmpy, smpxU, smpxW, double[::1] q2, i
 
         #tttB = _tm.time()
         # print("%d  +++++++++++++++++++++++++++++" % c)
-        # print "ph0L  %(L).4f  ph0H  %(H).4f   %(u).4f   %(s1).4f   %(s2).4f   idiv  %(id).4e" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s1" : svPr1, "s2" : svPr2, "id" : idiv}
+        #print "ph0L  %(L).4f  ph0H  %(H).4f   %(u).4f   %(s1).4f   %(s2).4f   idiv  %(id).4e" % {"L" : ph0L, "H" : ph0H, "u" : mu1prp, "s1" : svPr1, "s2" : svPr2, "id" : idiv}
         # #print "vPr1  %(1).4e  vPr2 %(2).4e" % {"1" : vPr1, "2" : vPr2}
         # print(J)
         # print(Ji)

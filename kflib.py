@@ -287,7 +287,7 @@ def createDataPP(N, B, beta, u, stNz, p=1, trim=0, x=None, absrefr=0):
 
     return x[trim:N], spks[trim:N], prbs[trim:N], fs[trim:N]
 
-def createDataPPl2(TR, N, dt, B, wgts, u_psth, innovar=0.01, lambda2=None, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):
+def createDataPPl2(TR, N, dt, B, wgts, u_psth, innovar=0.01, lambda2=None, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None, buf=500):
     """
     B:  AR coefficeints
     wgts:  weight for each component   (will be summed)
@@ -301,13 +301,14 @@ def createDataPPl2(TR, N, dt, B, wgts, u_psth, innovar=0.01, lambda2=None, nRhyt
     if etme is None:
         etme = _N.ones(N)
 
-    buf  = 500
     sqrtq2 = _N.sqrt(innovar)
     #if (stNz is not None) and (_N.sum(stNz) == 0):
     #xc   = _N.zeros((nRhythms, N+buf))   #  components
-    x = None#_N.zeros(N+buf)
+    #x = None#_N.zeros(N+buf)
     #else:
+    predefined_x = True
     if x is None:
+        predefined_x = False
         xc   = _N.empty((nRhythms, N+buf))   #  components
         for nr in range(nRhythms):
             k = len(B[nr])
@@ -326,6 +327,8 @@ def createDataPPl2(TR, N, dt, B, wgts, u_psth, innovar=0.01, lambda2=None, nRhyt
                 #xc[nr, i] = _N.dot(B[nr], xc[nr, i-1:i-k-1:-1]) + sstNz*rands[i]
                 xc[nr, i] = _N.dot(B[nr], xc[nr, i-k:i][::-1]) + sqrtq2*rands[i]
             xc[nr] *= wgts[nr]
+            #if len(_N.where(sqwv_transform == nr)[0]) == 1:
+            #    xc[nr] = 
     else:
         buf  = 0
         xc   = x
@@ -372,7 +375,10 @@ def createDataPPl2(TR, N, dt, B, wgts, u_psth, innovar=0.01, lambda2=None, nRhyt
         latst[i] = x[i+buf]
 
     fs[:] = prbsWithHist / dt
-    return xc[:, buf:], spks, latst, prbsWithHist, fs, prbsNOsc
+    if predefined_x:
+        return None, spks, latst, prbsWithHist, fs, prbsNOsc
+    else:
+        return xc[:, buf:], spks, latst, prbsWithHist, fs, prbsNOsc
 
 """
 def createDataPPl2(TR, N, dt, B, u, stNz, lambda2, nRhythms=1, p=1, x=None, offset=None, cs=1, etme=None):

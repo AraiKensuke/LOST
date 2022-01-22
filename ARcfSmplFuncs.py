@@ -96,14 +96,17 @@ def initF(nR, nCS, nCN, ifs=None, ir=0.97):
     #  random AR coeff set.  nR real roots and nCPr cmplx pairs
     nCPr = nCS + nCN
 
-    if nCPr == 0:
-        iRs = _N.empty(nR + 2*nCPr, dtype=_N.float64)    # inverse roots
-    else:
-        iRs = _N.empty(nR + 2*nCPr, dtype=_N.complex)    # inverse roots
+    #if nCPr == 0:
+    #    iRs = _N.empty(nR + 2*nCPr, dtype=_N.float64)    # inverse roots
+    #else:
+    iRs = _N.empty(nR + 2*nCPr, dtype=_N.complex)    # inverse roots
 
     #iRs[0:nR] = -0.6 - 0.4*_N.random.rand(nR)
-    #iRs[0:nR] = 0.1*_N.random.rand(nR)
-    iRs[0:nR] = -0.4   #  negative value here helps AR(3) when using modulus prior
+    if nCPr == 0:
+        iRs[0:nR] = 0.8
+    else:
+        iRs[0:nR] = 0.1 + 0.5*_N.random.randn(nR)
+    #iRs[0:nR] =    #  negative value here helps AR(3) when using modulus prior
     #iRs[0:nR] = 0.4   #  was good for AR(p > 3) when using modulus prior
 
     if (ifs == None):

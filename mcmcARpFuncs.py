@@ -188,7 +188,7 @@ def runNotes(setname, ID_q2, TR0, TR1):
     #  ID_q2
     #  Trials using
 
-def loadKnown(runDir, trials=None, fn="known.dat"):
+def loadKnown(runDir, trials=None, fn="known.dat", fnU="knownU.dat"):
     if (fn is not None) and (fn != ""):
         fn = "%(rd)s/%(fn)s" % {"rd" : runDir, "fn" : fn}
         if os.access(fn, os.F_OK):
@@ -203,3 +203,21 @@ def loadKnown(runDir, trials=None, fn="known.dat"):
             print("!!!  Couldn't find \"%s\" !!!" % fn)
 
     return None
+
+def loadKnownU(runDir, trials=None, fn="knownU.dat"):
+    if (fn is not None) and (fn != ""):
+        fn = "%(rd)s/%(fn)s" % {"rd" : runDir, "fn" : fn}
+        if os.access(fn, os.F_OK):
+            print("***  loaded known U \"%s\" ***" % fn)
+            a = _N.loadtxt(fn)
+            if trials is None:
+                print("here........   return knownU")
+                print(a)
+                return a
+            return a[trials]
+        print("!!!  NO known U loaded !!!")
+        if fn is not None:
+            print("!!!  Couldn't find \"%s\" !!!" % fn)
+
+    print("here........   returning 0")
+    return 0
